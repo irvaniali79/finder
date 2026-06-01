@@ -1,18 +1,18 @@
 # Project Tasks
 
 ## Completed
-- [ ] Initial project setup (directories, git init)
-- [ ] Create PROJECT_BRIEF.md
-- [ ] Create sample documents (FAQ, leave policy, product guide)
-- [ ] Implement document loading and chunking (retrieval.py)
-- [ ] Implement vector storage with FAISS
-- [ ] Implement LLM integration (agent.py)
-- [ ] Create CLI entry point (main.py)
-- [ ] Create requirements.txt
-- [ ] Add EVALS.md with test questions
-- [ ] Test the system against evaluation questions
-- [ ] Update AGENT_CONTEXT.md with current state
+- [x] Initial project setup (directories, git init)
+- [x] Create PROJECT_BRIEF.md
+- [x] Create sample documents (FAQ, leave policy, product guide)
+- [x] Implement document loading and chunking (retrieval.py)
+- [x] Implement vector storage with FAISS
+- [x] Implement LLM integration (agent.py)
+- [x] Create CLI entry point (main.py)
+- [x] Create requirements.txt
+- [x] Update AGENT_CONTEXT.md with current state
 
 ## Remaining
+- [ ] Add EVALS.md with test questions
+- [ ] Test the system against evaluation questions
 - [ ] Create README.md with run instructions
 - [ ] Final testing and validation
