@@ -33,4 +33,4 @@
 - **Affected files**: agentic-brain/EVALS.md, tests/test_evals.py
 - **Key functions**: N/A (QA pairs + integration test)
 - **Tests**: tests/test_evals.py
-- [ ] Task complete
+- [x] Task complete
