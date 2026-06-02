@@ -1,4 +1,6 @@
 # Agent Context
+“See SUBAGENT_PROTOCOL.md for rules on when and how to delegate feature tasks to subagents.”
+
 
 ## Project Overview
 Mini Company Knowledge Bot - A RAG-based Q&A system for internal company documentation.
