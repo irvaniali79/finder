@@ -17,7 +17,7 @@ ollama serve
 ## Run
 
 ```bash
-python src/main.py
+./.venv/bin/python src/main.py
 ```
 
 ## Architecture
