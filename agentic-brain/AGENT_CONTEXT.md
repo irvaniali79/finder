@@ -1,5 +1,4 @@
 # Agent Context
-See SUBAGENT_PROTOCOL.md for rules on when and how to delegate feature tasks to subagents.
 
 
 ## Project Overview
@@ -8,7 +7,14 @@ Mini Company Knowledge Bot - A RAG-based Q&A system for internal company documen
 ## Current State
 - Core implementation complete: retrieval.py, agent.py, main.py
 - Company documents: FAQ.md, leave_policy.md, product_guide.md
-- Ready for testing with Ollama
+- Evaluation-related work: tests/test_evals.py exists; full LLM-dependent evaluation requires Ollama.
+- Remaining work: AGENT.md feature task 5 (Evaluation Suite and Integration Tests) is pending. When implementing it, follow the subagent protocol from SUBAGENT_PROTOCOL.md.
+
+## How to test
+```bash
+pytest
+pytest tests/test_evals.py
+```
 
 ## Tech Stack
 - LlamaIndex for document processing (SimpleDirectoryReader, SentenceSplitter)

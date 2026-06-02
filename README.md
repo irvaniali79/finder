@@ -32,3 +32,19 @@ python src/main.py
 - `docs/FAQ.md` - Frequently asked questions
 - `docs/leave_policy.md` - Employee leave policies
 - `docs/product_guide.md` - ProCRM product guide
+
+## Testing
+
+Run the test suite with:
+
+```bash
+pytest
+```
+
+Included tests: `tests/test_retrieval.py`, `tests/test_agent.py`, `tests/test_main.py`.
+
+LLM-dependent evaluation tests are skipped by default. To run them, set `FINDER_RUN_LLM_EVALS=1`:
+
+```bash
+FINDER_RUN_LLM_EVALS=1 pytest tests/test_evals.py
+```
