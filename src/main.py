@@ -26,7 +26,7 @@ def main():
         chunks = retriever.retrieve(query, top_k=3)
         answer = agent.answer(query, chunks)
         
-        print(f"\nAnswer: {answer}\n")
+        print("\nAnswer: {}\n".format(answer))
 
 if __name__ == "__main__":
     main()

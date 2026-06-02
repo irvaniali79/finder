@@ -10,9 +10,9 @@
 - [x] Create CLI entry point (main.py)
 - [x] Create requirements.txt
 - [x] Update AGENT_CONTEXT.md with current state
+- [x] Add EVALS.md with test questions
 
 ## Remaining
-- [ ] Add EVALS.md with test questions
 - [ ] Test the system against evaluation questions
 - [ ] Create README.md with run instructions
 - [ ] Final testing and validation
