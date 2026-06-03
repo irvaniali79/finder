@@ -28,9 +28,16 @@
 - **Tests**: tests/test_main.py
 - [x] Task complete
 
-## Feature 5: Evaluation Suite and Integration Tests
-- **Dependencies**: Feature 1, Feature 2, Feature 3, Feature 4
-- **Affected files**: agentic-brain/EVALS.md, tests/test_evals.py
-- **Key functions**: N/A (QA pairs + integration test)
-- **Tests**: tests/test_evals.py
-- [x] Task complete
+ ## Feature 5: Evaluation Suite and Integration Tests
+ - **Dependencies**: Feature 1, Feature 2, Feature 3, Feature 4
+ - **Affected files**: agentic-brain/EVALS.md, tests/test_evals.py
+ - **Key functions**: N/A (QA pairs + integration test)
+ - **Tests**: tests/test_evals.py
+ - [x] Task complete
+ 
+ ## Feature 6: Multi-format Document Ingestion
+ - **Dependencies**: Feature 1
+ - **Affected files**: src/retrieval.py, tests/test_retrieval.py
+ - **Key functions**: load_documents()
+ - **Tests**: tests/test_retrieval.py
+ - [x] Task complete
