@@ -1,8 +1,9 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, PropertyMock
 import numpy as np
 import sys
 import os
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -12,19 +13,58 @@ from retrieval import DocumentRetriever
 class TestDocumentRetriever(unittest.TestCase):
     def setUp(self):
         self.retriever = DocumentRetriever.__new__(DocumentRetriever)
-        self.retriever.docs_path = "docs/"
+        self.retriever.docs_path = Path("docs/")
         self.retriever.embed_model = MagicMock()
         self.retriever.index = MagicMock()
         self.retriever.chunks = [MagicMock(text="chunk one"), MagicMock(text="chunk two"), MagicMock(text="chunk three")]
 
-    def test_load_documents(self):
-        with patch("retrieval.SimpleDirectoryReader") as MockReader:
+    def test_load_documents_md(self):
+        with patch("retrieval.TxtReader") as MockReader:
             mock_reader = MockReader.return_value
-            mock_reader.load_data.return_value = ["doc1", "doc2"]
-            self.retriever.docs_path = "tests/fixtures"
+            mock_reader.load_data.return_value = ["md-doc"]
+            with patch.object(self.retriever.docs_path, "exists", return_value=True), \
+                 patch.object(self.retriever.docs_path, "iterdir") as iterdir_mock:
+                file_mock = MagicMock()
+                file_mock.is_file.return_value = True
+                file_mock.suffix.lower.return_value = ".md"
+                iterdir_mock.return_value = [file_mock]
+                docs = self.retriever.load_documents()
+                self.assertEqual(docs, ["md-doc"])
+                mock_reader.load_data.assert_called_once_with(file_mock)
+
+    def test_load_documents_txt(self):
+        with patch("retrieval.TxtReader") as MockReader:
+            mock_reader = MockReader.return_value
+            mock_reader.load_data.return_value = ["txt-doc"]
+            with patch.object(self.retriever.docs_path, "exists", return_value=True), \
+                 patch.object(self.retriever.docs_path, "iterdir") as iterdir_mock:
+                file_mock = MagicMock()
+                file_mock.is_file.return_value = True
+                file_mock.suffix.lower.return_value = ".txt"
+                iterdir_mock.return_value = [file_mock]
+                docs = self.retriever.load_documents()
+                self.assertEqual(docs, ["txt-doc"])
+                mock_reader.load_data.assert_called_once_with(file_mock)
+
+    def test_load_documents_pdf(self):
+        with patch("retrieval.PDFReader") as MockReader:
+            mock_reader = MockReader.return_value
+            mock_reader.load_data.return_value = ["pdf-doc"]
+            with patch.object(self.retriever.docs_path, "exists", return_value=True), \
+                 patch.object(self.retriever.docs_path, "iterdir") as iterdir_mock:
+                file_mock = MagicMock()
+                file_mock.is_file.return_value = True
+                file_mock.suffix.lower.return_value = ".pdf"
+                iterdir_mock.return_value = [file_mock]
+                docs = self.retriever.load_documents()
+                self.assertEqual(docs, ["pdf-doc"])
+                mock_reader.load_data.assert_called_once_with(file_mock)
+
+    def test_load_documents_empty_dir(self):
+        with patch.object(self.retriever.docs_path, "exists", return_value=True), \
+             patch.object(self.retriever.docs_path, "iterdir", return_value=iter([])):
             docs = self.retriever.load_documents()
-            self.assertEqual(docs, ["doc1", "doc2"])
-            MockReader.assert_called_with("tests/fixtures", required_exts=[".md"])
+            self.assertEqual(docs, [])
 
     def test_chunk_documents(self):
         with patch("retrieval.SentenceSplitter") as MockSplitter:
@@ -63,7 +103,7 @@ class TestDocumentRetriever(unittest.TestCase):
 
     def test_setup_runs_full_pipeline(self):
         retriever = DocumentRetriever.__new__(DocumentRetriever)
-        retriever.docs_path = "tests/fixtures"
+        retriever.docs_path = self.retriever.docs_path
         retriever.embed_model = MagicMock()
         retriever.index = MagicMock()
         retriever.chunks = []
