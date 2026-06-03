@@ -33,6 +33,8 @@ ollama serve
 - `docs/leave_policy.md` - Employee leave policies
 - `docs/product_guide.md` - ProCRM product guide
 
+Ingestion also reads plain `.txt` and `.pdf` files directly from `docs/` during setup. Unknown file types are skipped.
+
 ## Testing
 
 Run the test suite with:

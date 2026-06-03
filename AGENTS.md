@@ -42,8 +42,9 @@ Every task must be written as a feature-level deliverable with the following fie
   0. read `GITWORKFLOW.md`
   1. Write the code and the required tests for that feature.
   2. Run the tests. If any fail, follow the **Debug & Test Integrity Rule** (see below).
-  3. Mark the task as `[x]` in `TASKS.md` only when **all its tests pass**.
-  4. Save the file.
+  3. Mark the task as `[x]` in `agentic-brain/TASKS.md` only when **all its tests pass**.
+  4.1 Save the file.
+  4.2. update `agentic-brain` if necessery 
   5. **STOP completely.** Do not read or start the next task. Output a short summary and wait for the user’s explicit "continue" or next instruction.
 - **No skipping**: Never proceed to the next task without explicit user instruction, even if there are multiple unchecked tasks. This is a hard rule with zero exceptions.
 
@@ -64,11 +65,11 @@ A feature task that is large and multi-step may be delegated to a subagent to ke
 - **Test writing**: Every feature must include unit/integration tests in `tests/`. Tests must be traceable to the SSOT and to the functions listed in the task’s “Key functions” field.
 
 ### Overall Sequence
-1. **Before any code**, create `agentic-brain/PROJECT_BRIEF.md` with MVP scope and `TASKS.md` with a step-by-step task list (using the format above). Commit.
+1. **Before any code**, create `agentic-brain/PROJECT_BRIEF.md` with MVP scope and `agentic-brain/TASKS.md` with a step-by-step task list (using the format above). Commit.
 2. **Work iteratively, one feature task at a time.** After each step, commit with a clear message like "Add document loading and chunking".
-3. **Update `AGENT_CONTEXT.md`** after any significant change so that a new AI agent would know exactly what the project is and where to continue.
-4. **Record every important decision, mistake, or direction change in `MEMORY.md` immediately.** Don’t wait.
-5. Once core RAG works, generate 5 QA pairs (based strictly on the documents in `docs/`) and save them in `EVALS.md`. Then test the system against them. Document the actual outputs and fix any mismatches **without altering the expected answers**.
+3. **Update `agentic-brain/AGENT_CONTEXT.md`** after any significant change so that a new AI agent would know exactly what the project is and where to continue.
+4. **Record every important decision, mistake, or direction change in `agentic-brain/MEMORY.md` immediately.** Don’t wait.
+5. Once core RAG works, generate 5 QA pairs (based strictly on the documents in `docs/`) and save them in `agentic-brain/EVALS.md`. Then test the system against them. Document the actual outputs and fix any mismatches **without altering the expected answers**.
 6. Write a clean `README.md` with run instructions (dependencies, how to start).
 7. Ensure Git history has at least 5 meaningful commits. Feature branches are encouraged; if using only a linear history, keep commit messages descriptive.
 
