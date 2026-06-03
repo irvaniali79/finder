@@ -41,3 +41,10 @@
  - **Key functions**: load_documents()
  - **Tests**: tests/test_retrieval.py
  - [x] Task complete
+
+## Feature 7: Configurable Ollama Endpoint via Environment Variables
+ - **Dependencies**: Feature 3
+ - **Affected files**: src/agent.py, tests/test_agent.py, README.md
+ - **Key functions**: QAAgent.__init__()
+ - **Tests**: tests/test_agent.py
+ - [x] Task complete

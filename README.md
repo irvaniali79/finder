@@ -14,6 +14,12 @@ ollama pull llama3.2
 ollama serve
 ```
 
+**Environment variables** (optional):
+- `OLLAMA_BASE_URL` — Ollama server URL (default: `http://localhost:11434`)
+- `OLLAMA_MODEL` — Model name (default: `llama3.2`)
+
+These can be set to point at a third-party Ollama-compatible endpoint.
+
 ## Run
 
 ```bash

@@ -1,7 +1,11 @@
+import os
 from llama_index.llms.ollama import Ollama
 
+
 class QAAgent:
-    def __init__(self, model_name="llama3.2", base_url="http://localhost:11434"):
+    def __init__(self, model_name=None, base_url=None):
+        model_name = model_name or os.environ.get("OLLAMA_MODEL", "llama3.2")
+        base_url = base_url or os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
         self.llm = Ollama(model=model_name, base_url=base_url, request_timeout=120.0)
     
     def generate_prompt(self, query, context_chunks):
