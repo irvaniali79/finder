@@ -8,7 +8,10 @@ Mini Company Knowledge Bot - A RAG-based Q&A system for internal company documen
 - Core implementation complete: retrieval.py, agent.py, main.py
 - Company documents: FAQ.md, leave_policy.md, product_guide.md
 - Evaluation-related work: tests/test_evals.py exists; full LLM-dependent evaluation requires Ollama.
-- Remaining work: AGENTS.md feature task 5 (Evaluation Suite and Integration Tests) is pending. When implementing it, follow the subagent protocol from AGENTS.md.
+- Remaining work: None. All features complete. Follow task execution protocol from AGENTS.md and subagent protocol from SUBAGENT_PROTOCOL.md.
+
+## Tech Decisions
+See `/TECHDECISIONS.md` for the chosen RAG architecture, query flow, and evaluation strategy.
 
 ## How to test
 ```bash
