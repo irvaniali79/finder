@@ -99,7 +99,8 @@ class TestDocumentRetrieverEval(TestEvalSuite):
 
 class TestQAAgentEval(TestEvalSuite):
     def test_agent_generate_prompt_includes_context(self):
-        agent = QAAgent()
+        agent = QAAgent.__new__(QAAgent)
+        agent.llm = MagicMock()
         chunks = [("We are open Monday through Friday, 9 AM to 6 PM EST.", 0.1)]
         prompt = agent.generate_prompt("What are the business hours?", chunks)
         self.assertIn("We are open Monday through Friday", prompt)
@@ -107,15 +108,15 @@ class TestQAAgentEval(TestEvalSuite):
 
     @patch("agent.Ollama")
     def test_agent_answer_with_expected_responses(self, MockOllama):
-        agent = QAAgent()
+        agent = QAAgent.__new__(QAAgent)
+        agent.llm = MagicMock()
         expected = self.EXPECTED_ANSWERS[
             "What are the business hours for customer support?"
         ]
         response = MagicMock()
         response.text = expected
-        agent.llm = MagicMock()
         agent.llm.complete.return_value = response
-        
+
         actual = agent.answer(
             "What are the business hours for customer support?",
             [("We are open Monday through Friday, 9 AM to 6 PM EST.", 0.1)]

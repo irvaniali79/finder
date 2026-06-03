@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import sys
 import os
 
@@ -30,6 +30,29 @@ class TestQAAgent(unittest.TestCase):
         chunks = [("answer text", 0.0)]
         prompt = self.agent.generate_prompt("q", chunks)
         self.assertIn("answer text", prompt)
+
+    @patch("agent.Ollama")
+    def test_default_model_and_url(self, MockOllama):
+        agent = QAAgent()
+        MockOllama.assert_called_once_with(
+            model="llama3.2", base_url="http://localhost:11434", request_timeout=120.0
+        )
+
+    @patch("agent.Ollama")
+    def test_env_vars_override_defaults(self, MockOllama):
+        with patch.dict(os.environ, {"OLLAMA_MODEL": "llama3.1", "OLLAMA_BASE_URL": "http://ollama.example.com:11434"}):
+            QAAgent()
+        MockOllama.assert_called_once_with(
+            model="llama3.1", base_url="http://ollama.example.com:11434", request_timeout=120.0
+        )
+
+    @patch("agent.Ollama")
+    def test_constructor_args_override_env_vars(self, MockOllama):
+        with patch.dict(os.environ, {"OLLAMA_MODEL": "llama3.1", "OLLAMA_BASE_URL": "http://ollama.example.com:11434"}):
+            QAAgent(model_name="llama3.2", base_url="http://localhost:11434")
+        MockOllama.assert_called_once_with(
+            model="llama3.2", base_url="http://localhost:11434", request_timeout=120.0
+        )
 
 
 if __name__ == "__main__":

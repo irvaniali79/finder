@@ -21,6 +21,11 @@
 - Switched to file-by-file ingestion under docs/ using LlamaIndex TxtReader and PDFReader
 - This expands the knowledge source without changing chunking, embedding, or retrieval behavior
 
+## Ollama Endpoint Configurability
+- Added `OLLAMA_BASE_URL` and `OLLAMA_MODEL` environment variables so the agent can target remote/third-party Ollama endpoints
+- Constructor args still take precedence over env vars; env vars override defaults
+- Tested with unit tests for: defaults, env var overrides, constructor arg precedence
+
 ## Pending Improvements
 - Need to add proper error handling for edge cases
 - Should add validation for empty queries

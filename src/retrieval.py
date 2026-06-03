@@ -1,10 +1,9 @@
 import os
 from pathlib import Path
-from llama_index.core import SimpleDirectoryReader
+from llama_index.core import Document, SimpleDirectoryReader
 from llama_index.core.text_splitter import SentenceSplitter
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.readers.file.txt import TxtReader
-from llama_index.readers.file.pdf import PDFReader
+from llama_index.readers.file import PDFReader
 import faiss
 import numpy as np
 
@@ -25,7 +24,8 @@ class DocumentRetriever:
                 continue
             suffix = path.suffix.lower()
             if suffix in {".md", ".txt"}:
-                documents.extend(TxtReader().load_data(path))
+                text = path.read_text(encoding="utf-8")
+                documents.append(Document(text=text, metadata={"file_name": path.name}))
             elif suffix == ".pdf":
                 documents.extend(PDFReader().load_data(path))
         return documents
