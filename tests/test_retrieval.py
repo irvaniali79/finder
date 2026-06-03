@@ -20,46 +20,40 @@ class TestDocumentRetriever(unittest.TestCase):
         self.retriever.chunks = [MagicMock(text="chunk one"), MagicMock(text="chunk two"), MagicMock(text="chunk three")]
 
     def test_load_documents_md(self):
-        with patch("retrieval.Path") as MockPath:
-            mock_path_instance = MockPath.return_value
-            mock_file = MagicMock()
-            mock_file.is_file.return_value = True
-            mock_file.suffix.lower.return_value = ".md"
-            mock_file.name = "test.md"
-            mock_file.read_text.return_value = "# md content"
-            mock_path_instance.iterdir.return_value = [mock_file]
+        mock_file = MagicMock(spec=Path)
+        mock_file.is_file.return_value = True
+        mock_file.suffix.lower.return_value = ".md"
+        mock_file.name = "test.md"
+        mock_file.read_text.return_value = "# md content"
+        with patch.object(self.retriever.docs_path, "iterdir", return_value=[mock_file]):
             docs = self.retriever.load_documents()
             self.assertEqual(len(docs), 1)
             self.assertEqual(docs[0].text, "# md content")
             self.assertEqual(docs[0].metadata["file_name"], "test.md")
 
     def test_load_documents_txt(self):
-        with patch("retrieval.Path") as MockPath:
-            mock_path_instance = MockPath.return_value
-            mock_file = MagicMock()
-            mock_file.is_file.return_value = True
-            mock_file.suffix.lower.return_value = ".txt"
-            mock_file.name = "test.txt"
-            mock_file.read_text.return_value = "plain text content"
-            mock_path_instance.iterdir.return_value = [mock_file]
+        mock_file = MagicMock(spec=Path)
+        mock_file.is_file.return_value = True
+        mock_file.suffix.lower.return_value = ".txt"
+        mock_file.name = "test.txt"
+        mock_file.read_text.return_value = "plain text content"
+        with patch.object(self.retriever.docs_path, "iterdir", return_value=[mock_file]):
             docs = self.retriever.load_documents()
             self.assertEqual(len(docs), 1)
             self.assertEqual(docs[0].text, "plain text content")
             self.assertEqual(docs[0].metadata["file_name"], "test.txt")
 
     def test_load_documents_pdf(self):
-        with patch("retrieval.PDFReader") as MockReader, \
-             patch("retrieval.Path") as MockPath:
+        with patch("retrieval.PDFReader") as MockReader:
             mock_reader = MockReader.return_value
             mock_reader.load_data.return_value = ["pdf-doc"]
-            mock_path_instance = MockPath.return_value
-            mock_file = MagicMock()
+            mock_file = MagicMock(spec=Path)
             mock_file.is_file.return_value = True
             mock_file.suffix.lower.return_value = ".pdf"
-            mock_path_instance.iterdir.return_value = [mock_file]
-            docs = self.retriever.load_documents()
-            self.assertEqual(docs, ["pdf-doc"])
-            mock_reader.load_data.assert_called_once_with(mock_file)
+            with patch.object(self.retriever.docs_path, "iterdir", return_value=[mock_file]):
+                docs = self.retriever.load_documents()
+                self.assertEqual(docs, ["pdf-doc"])
+                mock_reader.load_data.assert_called_once_with(mock_file)
 
     def test_load_documents_empty_dir(self):
         with patch("retrieval.Path") as MockPath:
