@@ -86,7 +86,7 @@
 
 ## Feature 13: Per-Chunk Metadata Extraction
 - **Dependencies**: Feature 12
-- **Affected files**: src/retrieval.py, src/agent.py, tests/test_retrieval.py, tests/test_agent.py
-- **Key functions**: extract_chunk_metadata(), ChunkStore.add()
-- **Tests**: tests/test_retrieval.py, tests/test_agent.py
-- [ ] Task complete
+- **Affected files**: src/retrieval.py, src/agent.py, src/pipeline.py, tests/test_retrieval.py, tests/test_agent.py, tests/test_pipeline.py
+- **Key functions**: extract_chunk_metadata(), ChunkStore.add(), _filter_by_tags(), _boost_by_summary()
+- **Tests**: tests/test_retrieval.py, tests/test_agent.py, tests/test_pipeline.py
+- [x] Task complete

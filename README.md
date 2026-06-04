@@ -27,7 +27,7 @@ Optional:
 ## Run
 
 ```bash
-python src/main.py
+.venv/bin/python -m src.main
 ```
 
 The first run will ingest all supported documents under `docs/` (`.md`, `.txt`, `.pdf`), chunk them, generate embeddings, and build a FAISS index saved to `.cache/`. Subsequent runs only re-process changed files using content fingerprinting.

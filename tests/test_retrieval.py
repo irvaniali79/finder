@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from retrieval import ChunkStore, DocumentRetriever
+from retrieval import ChunkStore, DocumentRetriever, extract_chunk_metadata
 
 
 class TestChunkStore(unittest.TestCase):
@@ -90,6 +90,67 @@ class TestChunkStore(unittest.TestCase):
         self.assertEqual(store2.get(0)["text"], "alpha")
         store2.close()
         self.store = None
+
+    def test_add_stores_metadata_fields(self):
+        self.store = ChunkStore(self.db_path)
+        ids = self.store.add([{
+            "text": "We offer 20 vacation days per year.",
+            "metadata": {
+                "file_name": "leave.md",
+                "tags": ["vacation", "policy"],
+                "summary": "We offer 20 vacation days per year.",
+                "importance": 0.7,
+            },
+        }])
+        chunk = self.store.get(ids[0])
+        self.assertEqual(chunk["file_name"], "leave.md")
+        self.assertEqual(chunk["tags"], ["vacation", "policy"])
+        self.assertEqual(chunk["summary"], "We offer 20 vacation days per year.")
+        self.assertEqual(chunk["importance"], 0.7)
+
+    def test_get_many_returns_metadata(self):
+        self.store = ChunkStore(self.db_path)
+        ids = self.store.add([
+            {"text": "alpha", "metadata": {
+                "file_name": "a.md", "tags": ["x"], "summary": "s1", "importance": 0.2,
+            }},
+            {"text": "beta", "metadata": {
+                "file_name": "b.md", "tags": ["y"], "summary": "s2", "importance": 0.8,
+            }},
+        ])
+        result = self.store.get_many([ids[0], ids[1]])
+        self.assertEqual(result[0]["tags"], ["x"])
+        self.assertEqual(result[1]["importance"], 0.8)
+        self.assertEqual(result[0]["summary"], "s1")
+
+    def test_migration_adds_columns_to_existing_db(self):
+        import sqlite3
+        conn = sqlite3.connect(str(self.db_path))
+        conn.execute(
+            "CREATE TABLE chunks (id INTEGER PRIMARY KEY, text TEXT NOT NULL, file_name TEXT)"
+        )
+        conn.execute("INSERT INTO chunks (id, text, file_name) VALUES (0, 'old', 'old.md')")
+        conn.commit()
+        conn.close()
+
+        self.store = ChunkStore(self.db_path)
+        chunk = self.store.get(0)
+        self.assertEqual(chunk["text"], "old")
+        self.assertEqual(chunk["file_name"], "old.md")
+        self.assertEqual(chunk["tags"], [])
+        self.assertEqual(chunk["summary"], "")
+        self.assertEqual(chunk["importance"], 0.0)
+
+    def test_importance_persists_as_float(self):
+        self.store = ChunkStore(self.db_path)
+        ids = self.store.add([{
+            "text": "x", "metadata": {
+                "file_name": "f.md", "tags": [], "summary": "s", "importance": 0.42,
+            },
+        }])
+        chunk = self.store.get(ids[0])
+        self.assertEqual(chunk["importance"], 0.42)
+        self.assertIsInstance(chunk["importance"], float)
 
 
 class TestDocumentRetriever(unittest.TestCase):
@@ -182,10 +243,34 @@ class TestDocumentRetriever(unittest.TestCase):
             chunks = self.retriever.chunk_documents(["d1"])
             self.assertEqual(len(chunks), 2)
             self.assertEqual(chunks[0]["text"], "n1 text")
-            self.assertEqual(chunks[0]["metadata"], {"file_name": "a.md"})
+            self.assertEqual(chunks[0]["metadata"]["file_name"], "a.md")
+            self.assertIn("tags", chunks[0]["metadata"])
+            self.assertIn("summary", chunks[0]["metadata"])
+            self.assertIn("importance", chunks[0]["metadata"])
 
     def test_chunk_documents_empty_input(self):
         self.assertEqual(self.retriever.chunk_documents([]), [])
+
+    def test_chunk_documents_populates_metadata(self):
+        mock_splitter = MagicMock()
+        node1 = self._make_fake_node(
+            "Full-time employees receive 20 vacation days per year for personal time off.",
+            "leave.md",
+        )
+        mock_splitter.get_nodes_from_documents.return_value = [node1]
+        with patch("retrieval.SentenceSplitter", return_value=mock_splitter):
+            chunks = self.retriever.chunk_documents(["d1"])
+        self.assertEqual(len(chunks), 1)
+        meta = chunks[0]["metadata"]
+        self.assertIn("tags", meta)
+        self.assertIn("summary", meta)
+        self.assertIn("importance", meta)
+        self.assertEqual(meta["file_name"], "leave.md")
+        self.assertGreater(len(meta["tags"]), 0)
+        self.assertIn("vacation", meta["tags"])
+        self.assertTrue(meta["summary"])
+        self.assertGreater(meta["importance"], 0.0)
+        self.assertLessEqual(meta["importance"], 1.0)
 
     def test_create_embeddings(self):
         self.retriever.embed_model.get_text_embedding.return_value = [0.1, 0.2]
@@ -422,6 +507,48 @@ class TestDocumentRetriever(unittest.TestCase):
 
     def test_chunks_not_held_in_ram_list(self):
         self.assertFalse(hasattr(self.retriever, "chunks") and isinstance(self.retriever.chunks, list))
+
+
+class TestExtractChunkMetadata(unittest.TestCase):
+    def test_empty_text_returns_empty_metadata(self):
+        meta = extract_chunk_metadata("", "f.md")
+        self.assertEqual(meta["tags"], [])
+        self.assertEqual(meta["summary"], "")
+        self.assertEqual(meta["importance"], 0.0)
+        self.assertEqual(meta["file_name"], "f.md")
+
+    def test_extracts_tags(self):
+        text = "Our maternity leave policy grants 12 weeks paid leave for new parents."
+        meta = extract_chunk_metadata(text, "leave.md")
+        self.assertIn("maternity", meta["tags"])
+        self.assertIn("leave", meta["tags"])
+        self.assertIn("policy", meta["tags"])
+
+    def test_summary_is_first_sentence_truncated(self):
+        text = (
+            "Full-time employees receive 20 vacation days per year. "
+            "Unused days can be carried over up to a maximum of 5 days."
+        )
+        meta = extract_chunk_metadata(text, "leave.md")
+        self.assertTrue(meta["summary"].startswith("Full-time employees"))
+        self.assertLessEqual(len(meta["summary"]), 200)
+
+    def test_importance_within_unit_interval(self):
+        meta = extract_chunk_metadata("word " * 500, "f.md")
+        self.assertGreaterEqual(meta["importance"], 0.0)
+        self.assertLessEqual(meta["importance"], 1.0)
+
+    def test_importance_higher_for_richer_chunks(self):
+        short = extract_chunk_metadata("hello", "f.md")
+        long = extract_chunk_metadata(
+            "Vacation policy grants 20 days per year with carry-over up to 5 days.",
+            "f.md",
+        )
+        self.assertGreater(long["importance"], short["importance"])
+
+    def test_file_name_is_preserved(self):
+        meta = extract_chunk_metadata("some text content here", "FAQ.md")
+        self.assertEqual(meta["file_name"], "FAQ.md")
 
 
 if __name__ == "__main__":

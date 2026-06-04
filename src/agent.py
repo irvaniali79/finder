@@ -29,8 +29,27 @@ class QAAgent:
         self.session.mount("https://", adapter)
     
     def generate_prompt(self, query, context_chunks):
-        context_text = "\n\n".join([chunk for chunk, _ in context_chunks])
-        
+        rendered_chunks = []
+        for entry in context_chunks:
+            if len(entry) == 3:
+                chunk, _, metadata = entry
+                metadata = metadata or {}
+            else:
+                chunk, _ = entry
+                metadata = {}
+
+            file_name = metadata.get("file_name", "")
+            summary = metadata.get("summary", "")
+            header_bits = []
+            if file_name:
+                header_bits.append(f"[source: {file_name}]")
+            if summary and summary.strip() and summary.strip() != chunk.strip():
+                header_bits.append(f"summary: {summary.strip()}")
+            header = (" ".join(header_bits) + "\n") if header_bits else ""
+            rendered_chunks.append(f"{header}{chunk}")
+
+        context_text = "\n\n".join(rendered_chunks)
+
         prompt = """You are a helpful company knowledge assistant. Answer the question based ONLY on the provided context.
 
 Context:

@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import sqlite3
 from pathlib import Path
 from llama_index.core import Document
@@ -9,11 +10,39 @@ from llama_index.readers.file import PDFReader
 import faiss
 import numpy as np
 
+from src.preprocessor import extract_tags
+
 
 SUPPORTED_SUFFIXES = {".md", ".txt", ".pdf"}
 
 
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+_TAG_WEIGHT = 0.5
+_LENGTH_WEIGHT = 0.5
+_MAX_IMPORTANCE = 1.0
+
+
+def extract_chunk_metadata(text, file_name=""):
+    if not text:
+        return {"tags": [], "summary": "", "importance": 0.0, "file_name": file_name or ""}
+    tags = extract_tags(text)
+    first_sentence = _SENTENCE_SPLIT_RE.split(text.strip(), maxsplit=1)[0].strip()
+    summary = first_sentence[:200]
+    word_count = len(re.findall(r"\b\w+\b", text))
+    length_score = min(1.0, word_count / 100.0)
+    tag_score = min(1.0, len(tags) / 5.0)
+    importance = min(_MAX_IMPORTANCE, _LENGTH_WEIGHT * length_score + _TAG_WEIGHT * tag_score)
+    return {
+        "tags": tags,
+        "summary": summary,
+        "importance": float(importance),
+        "file_name": file_name or "",
+    }
+
+
 class ChunkStore:
+    METADATA_COLUMNS = ("tags", "summary", "importance", "file_name")
+
     def __init__(self, db_path):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -30,44 +59,94 @@ class ChunkStore:
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_chunks_file_name ON chunks(file_name)"
         )
+        self._migrate_add_metadata_columns()
         self._conn.commit()
         self._next_id = int(
             self._conn.execute("SELECT COALESCE(MAX(id), -1) + 1 FROM chunks").fetchone()[0]
         )
 
+    def _migrate_add_metadata_columns(self):
+        existing = {
+            row[1]
+            for row in self._conn.execute("PRAGMA table_info(chunks)").fetchall()
+        }
+        if "tags" not in existing:
+            self._conn.execute("ALTER TABLE chunks ADD COLUMN tags TEXT DEFAULT '[]'")
+        if "summary" not in existing:
+            self._conn.execute("ALTER TABLE chunks ADD COLUMN summary TEXT DEFAULT ''")
+        if "importance" not in existing:
+            self._conn.execute("ALTER TABLE chunks ADD COLUMN importance REAL DEFAULT 0.0")
+
+    @staticmethod
+    def _encode_metadata(chunk):
+        metadata = chunk.get("metadata", {}) or {}
+        return {
+            "text": chunk["text"],
+            "file_name": metadata.get("file_name", ""),
+            "tags": json.dumps(metadata.get("tags", [])),
+            "summary": metadata.get("summary", ""),
+            "importance": float(metadata.get("importance", 0.0)),
+        }
+
     def add(self, chunks):
         if not chunks:
             return []
-        ids = []
+        encoded = [self._encode_metadata(c) for c in chunks]
         rows = [
-            (self._next_id + i, c["text"], c["metadata"].get("file_name", ""))
-            for i, c in enumerate(chunks)
+            (
+                self._next_id + i,
+                e["text"],
+                e["file_name"],
+                e["tags"],
+                e["summary"],
+                e["importance"],
+            )
+            for i, e in enumerate(encoded)
         ]
         self._conn.executemany(
-            "INSERT INTO chunks (id, text, file_name) VALUES (?, ?, ?)", rows
+            "INSERT INTO chunks (id, text, file_name, tags, summary, importance) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            rows,
         )
         ids = [r[0] for r in rows]
         self._next_id += len(rows)
         self._conn.commit()
         return ids
 
-    def get(self, id):
-        row = self._conn.execute(
-            "SELECT text, file_name FROM chunks WHERE id = ?", (id,)
-        ).fetchone()
+    def _row_to_chunk(self, row):
         if row is None:
             return None
-        return {"text": row[0], "file_name": row[1]}
+        chunk_id, text, file_name, tags_json, summary, importance = row
+        try:
+            tags = json.loads(tags_json) if tags_json else []
+        except (TypeError, ValueError):
+            tags = []
+        return {
+            "text": text,
+            "file_name": file_name,
+            "tags": tags,
+            "summary": summary or "",
+            "importance": float(importance) if importance is not None else 0.0,
+        }
+
+    def get(self, id):
+        row = self._conn.execute(
+            "SELECT id, text, file_name, tags, summary, importance "
+            "FROM chunks WHERE id = ?",
+            (id,),
+        ).fetchone()
+        return self._row_to_chunk(row)
 
     def get_many(self, ids):
         if not ids:
             return []
         placeholders = ",".join("?" * len(ids))
         rows = self._conn.execute(
-            f"SELECT id, text, file_name FROM chunks WHERE id IN ({placeholders})",
+            f"SELECT id, text, file_name, tags, summary, importance "
+            f"FROM chunks WHERE id IN ({placeholders})",
             ids,
         ).fetchall()
-        id_to_chunk = {r[0]: {"text": r[1], "file_name": r[2]} for r in rows}
+        id_to_chunk = {r[0]: self._row_to_chunk(r) for r in rows}
         return [id_to_chunk.get(i) for i in ids]
 
     def count(self):
@@ -210,7 +289,10 @@ class DocumentRetriever:
         chunk_dicts = []
         for node in nodes:
             metadata = dict(node.metadata) if node.metadata else {}
-            chunk_dicts.append({"text": node.text, "metadata": metadata})
+            file_name = metadata.get("file_name", "")
+            extracted = extract_chunk_metadata(node.text, file_name)
+            merged = {**metadata, **extracted}
+            chunk_dicts.append({"text": node.text, "metadata": merged})
         return chunk_dicts
 
     def create_embeddings(self, chunks):
@@ -276,7 +358,10 @@ class DocumentRetriever:
         nodes = splitter.get_nodes_from_documents(documents)
         for node in nodes:
             metadata = dict(node.metadata) if node.metadata else {}
-            new_chunks.append({"text": node.text, "metadata": metadata})
+            file_name = metadata.get("file_name", "")
+            extracted = extract_chunk_metadata(node.text, file_name)
+            merged = {**metadata, **extracted}
+            new_chunks.append({"text": node.text, "metadata": merged})
 
         store.add(new_chunks)
         embeddings = self.create_embeddings(new_chunks)
