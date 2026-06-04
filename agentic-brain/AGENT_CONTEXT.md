@@ -8,6 +8,7 @@ Mini Company Knowledge Bot - a RAG-based CLI Q&A system backed by the docs/ know
 - Document ingestion flow supports `.txt`, `.md`, and `.pdf` files directly under `docs/`
 - OpenRouter is used as the LLM provider instead of Ollama
 - Ingestion is incremental: `DocumentRetriever.setup()` fingerprints each file in `docs/`, persists the FAISS index, chunks, and per-file state to `.cache/`, and only re-processes files that are new or changed on subsequent runs
+- Chunk text is stored in a SQLite DB (`.cache/chunks.db`) via the `ChunkStore` class, not in RAM — keeps the process usable on large corpora
 - `.cache/` is git-ignored; use `DocumentRetriever.clear_cache()` to force a full rebuild
 - Test coverage updated in `tests/test_retrieval.py` and `tests/test_agent.py`
 

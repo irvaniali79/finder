@@ -61,4 +61,4 @@
 - **Affected files**: src/retrieval.py, tests/test_retrieval.py, agentic-brain/MEMORY.md, agentic-brain/AGENT_CONTEXT.md
 - **Key functions**: ChunkStore.__init__(), ChunkStore.add(), ChunkStore.get(), ChunkStore.get_many(), DocumentRetriever.setup(), DocumentRetriever.retrieve()
 - **Tests**: tests/test_retrieval.py
-- [ ] Task complete
+- [x] Task complete

@@ -189,7 +189,10 @@ class DocumentRetriever:
     def clear_cache(self):
         self.state = {}
         if self.chunk_store is not None:
-            self.chunk_store.clear()
+            try:
+                self.chunk_store.clear()
+            except sqlite3.ProgrammingError:
+                pass
             self.chunk_store = None
         self.index = None
         for path in (self._state_path(), self._index_path(), self._chunk_db_path()):
