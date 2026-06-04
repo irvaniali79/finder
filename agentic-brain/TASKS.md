@@ -62,3 +62,31 @@
 - **Key functions**: ChunkStore.__init__(), ChunkStore.add(), ChunkStore.get(), ChunkStore.get_many(), DocumentRetriever.setup(), DocumentRetriever.retrieve()
 - **Tests**: tests/test_retrieval.py
 - [x] Task complete
+
+## Feature 10: Pipeline Variants V0–V5 (Ablation Harness)
+- **Dependencies**: Feature 9
+- **Affected files**: src/retrieval.py, src/pipeline.py, tests/test_pipeline.py, agentic-brain/MEMORY.md, agentic-brain/AGENT_CONTEXT.md
+- **Key functions**: build_pipeline(variant), Pipeline.retrieve()
+- **Tests**: tests/test_pipeline.py
+- [x] Task complete
+
+## Feature 11: Query Preprocessing (Tags + 2–3 Rewrites)
+- **Dependencies**: Feature 10
+- **Affected files**: src/preprocessor.py, src/pipeline.py, tests/test_pipeline.py, agentic-brain/MEMORY.md, agentic-brain/AGENT_CONTEXT.md
+- **Key functions**: extract_tags(), expand_query(), detect_question_intent(), combine_query_embeddings(), Pipeline._build_query_embedding()
+- **Tests**: tests/test_pipeline.py
+- [x] Task complete
+
+## Feature 12: Two-Stage Retrieval with Re-Ranking
+- **Dependencies**: Feature 11
+- **Affected files**: src/pipeline.py, tests/test_pipeline.py
+- **Key functions**: retrieve_top_n(), rerank(), retrieve_top_k()
+- **Tests**: tests/test_pipeline.py
+- [x] Task complete
+
+## Feature 13: Per-Chunk Metadata Extraction
+- **Dependencies**: Feature 12
+- **Affected files**: src/retrieval.py, src/agent.py, tests/test_retrieval.py, tests/test_agent.py
+- **Key functions**: extract_chunk_metadata(), ChunkStore.add()
+- **Tests**: tests/test_retrieval.py, tests/test_agent.py
+- [ ] Task complete
