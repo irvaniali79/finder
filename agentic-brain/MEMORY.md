@@ -3,7 +3,7 @@
 ## Initial Setup Decisions
 - Chose LlamaIndex for document processing due to its simplicity and integration capabilities
 - Selected FAISS for vector storage as it's fast, local, and has minimal dependencies
-- Used Ollama with Llama 3.2 for LLM capabilities
+- Used OpenRouter API for LLM capabilities (model: openrouter/free by default)
 - Selected HuggingFace all-MiniLM-L6-v2 for embeddings due to good balance of performance and size
 - Implemented a CLI interface for simplicity and ease of testing
 
@@ -21,9 +21,9 @@
 - Switched to file-by-file ingestion under docs/ using LlamaIndex TxtReader and PDFReader
 - This expands the knowledge source without changing chunking, embedding, or retrieval behavior
 
-## Ollama Endpoint Configurability
-- Added `OLLAMA_BASE_URL` and `OLLAMA_MODEL` environment variables so the agent can target remote/third-party Ollama endpoints
-- Constructor args still take precedence over env vars; env vars override defaults
+## OpenRouter Endpoint Configurability
+- Added `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and `OPENROUTER_API_BASE` environment variables so the agent can target different OpenRouter endpoints/models
+- Constructor args take precedence over env vars; env vars override defaults
 - Tested with unit tests for: defaults, env var overrides, constructor arg precedence
 
 ## Pending Improvements

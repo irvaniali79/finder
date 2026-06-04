@@ -12,5 +12,5 @@ Mini Company Knowledge Bot - a RAG-based CLI Q&A system backed by the docs/ know
 
 ## Notable Constraints
 - Local development tests require installed packages (`pytest`, `numpy`, `faiss-cpu`, etc.)
-- Ollama endpoint is configurable via `OLLAMA_BASE_URL` and `OLLAMA_MODEL` env vars (defaults to `http://localhost:11434` and `llama3.2`)
+- OpenRouter endpoint is configurable via `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and `OPENROUTER_API_BASE` env vars (defaults to `openrouter/free` model and `https://openrouter.ai/api/v1/chat/completions`)
 - Note: 4 pre-existing test failures in retrieval/eval suites due to outdated mocks from prior ingestion flow refactor; unrelated to this feature

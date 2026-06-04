@@ -10,8 +10,12 @@ from agent import QAAgent
 
 class TestQAAgent(unittest.TestCase):
     def setUp(self):
-        self.agent = QAAgent.__new__(QAAgent)
-        self.agent.llm = MagicMock()
+        os.environ["OPENROUTER_API_KEY"] = "test_api_key"
+        self.agent = QAAgent()
+
+    def tearDown(self):
+        if "OPENROUTER_API_KEY" in os.environ:
+            del os.environ["OPENROUTER_API_KEY"]
 
     def test_generate_prompt_contains_context_and_query(self):
         chunks = [("company is open 9 AM to 6 PM.", 0.0), ("full-time employees receive 20 days.", 0.0)]
@@ -20,39 +24,56 @@ class TestQAAgent(unittest.TestCase):
         self.assertIn("full-time employees receive 20 days.", prompt)
         self.assertIn("What are your business hours?", prompt)
 
-    def test_answer_returns_llm_text(self):
-        self.agent.llm.complete.return_value = MagicMock(text="We are open 9 AM to 6 PM EST.")
+    @patch("agent.requests.Session.post")
+    def test_answer_returns_llm_text(self, mock_post):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "We are open 9 AM to 6 PM EST."}}]
+        }
+        mock_post.return_value = mock_response
+        
         answer = self.agent.answer("business hours?", [("context", 0.0)])
         self.assertEqual(answer, "We are open 9 AM to 6 PM EST.")
-        self.agent.llm.complete.assert_called_once()
+        mock_post.assert_called_once()
 
     def test_generate_prompt_does_not_include_metadata(self):
         chunks = [("answer text", 0.0)]
         prompt = self.agent.generate_prompt("q", chunks)
         self.assertIn("answer text", prompt)
 
-    @patch("agent.Ollama")
-    def test_default_model_and_url(self, MockOllama):
-        agent = QAAgent()
-        MockOllama.assert_called_once_with(
-            model="llama3.2", base_url="http://localhost:11434", request_timeout=120.0
-        )
+    @patch("agent.requests.Session.post")
+    def test_answer_raises_on_parse_error(self, mock_post):
+        mock_response = MagicMock()
+        mock_response.text = "Bad Gateway"
+        mock_response.json.side_effect = ValueError("No JSON object could be decoded")
+        mock_post.return_value = mock_response
+        
+        with self.assertRaises(RuntimeError) as context:
+            self.agent.answer("business hours?", [("context", 0.0)])
+        self.assertIn("Failed to parse LLM response", str(context.exception))
 
-    @patch("agent.Ollama")
-    def test_env_vars_override_defaults(self, MockOllama):
-        with patch.dict(os.environ, {"OLLAMA_MODEL": "llama3.1", "OLLAMA_BASE_URL": "http://ollama.example.com:11434"}):
+    def test_missing_api_key_raises_error(self):
+        del os.environ["OPENROUTER_API_KEY"]
+        with self.assertRaises(ValueError) as context:
             QAAgent()
-        MockOllama.assert_called_once_with(
-            model="llama3.1", base_url="http://ollama.example.com:11434", request_timeout=120.0
-        )
+        self.assertIn("OPENROUTER_API_KEY environment variable must be set", str(context.exception))
 
-    @patch("agent.Ollama")
-    def test_constructor_args_override_env_vars(self, MockOllama):
-        with patch.dict(os.environ, {"OLLAMA_MODEL": "llama3.1", "OLLAMA_BASE_URL": "http://ollama.example.com:11434"}):
-            QAAgent(model_name="llama3.2", base_url="http://localhost:11434")
-        MockOllama.assert_called_once_with(
-            model="llama3.2", base_url="http://localhost:11434", request_timeout=120.0
-        )
+    def test_constructor_args_override_env_vars(self):
+        with patch.dict(os.environ, {"OPENROUTER_MODEL": "env_model", "OPENROUTER_API_BASE": "http://env.com/api"}):
+            agent = QAAgent(model_name="custom_model", api_base="http://custom.com/api")
+            self.assertEqual(agent.model_name, "custom_model")
+            self.assertEqual(agent.api_base, "http://custom.com/api")
+
+    def test_env_vars_override_defaults(self):
+        with patch.dict(os.environ, {"OPENROUTER_MODEL": "env_model", "OPENROUTER_API_BASE": "http://env.com/api"}):
+            agent = QAAgent()
+            self.assertEqual(agent.model_name, "env_model")
+            self.assertEqual(agent.api_base, "http://env.com/api")
+
+    def test_default_model_and_url(self):
+        agent = QAAgent()
+        self.assertEqual(agent.model_name, "openrouter/free")
+        self.assertEqual(agent.api_base, "https://openrouter.ai/api/v1/chat/completions")
 
 
 if __name__ == "__main__":

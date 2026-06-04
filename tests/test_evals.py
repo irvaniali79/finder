@@ -83,39 +83,43 @@ class TestDocumentRetrieverEval(TestEvalSuite):
         retriever = DocumentRetriever.__new__(DocumentRetriever)
         retriever.docs_path = "tests/fixtures"
         retriever.embed_model = MagicMock()
-        retriever.index = MagicMock()
         retriever.chunks = []
-        
+
         with patch.object(retriever, "load_documents", return_value=["d1"]) as load_mock, \
              patch.object(retriever, "chunk_documents", return_value=[MagicMock(text="n1")]) as chunk_mock, \
-             patch.object(retriever, "create_embeddings", return_value=np.array([[0.5, 0.5], [0.6, 0.6]], dtype="float32")) as emb_mock, \
-             patch.object(retriever, "build_index") as build_mock:
+             patch.object(retriever, "create_embeddings", return_value=np.array([[0.5, 0.5], [0.6, 0.6]], dtype="float32")) as emb_mock:
             retriever.setup()
             load_mock.assert_called_once()
             chunk_mock.assert_called_once_with(["d1"])
-            build_mock.assert_called_once()
+            self.assertIsInstance(retriever.index, faiss.IndexFlatL2)
             self.assertEqual(retriever.index.ntotal, 2)
 
 
 class TestQAAgentEval(TestEvalSuite):
     def test_agent_generate_prompt_includes_context(self):
         agent = QAAgent.__new__(QAAgent)
-        agent.llm = MagicMock()
         chunks = [("We are open Monday through Friday, 9 AM to 6 PM EST.", 0.1)]
         prompt = agent.generate_prompt("What are the business hours?", chunks)
         self.assertIn("We are open Monday through Friday", prompt)
         self.assertIn("What are the business hours", prompt)
 
-    @patch("agent.Ollama")
-    def test_agent_answer_with_expected_responses(self, MockOllama):
-        agent = QAAgent.__new__(QAAgent)
-        agent.llm = MagicMock()
+    @patch("agent.requests.Session.post")
+    def test_agent_answer_with_expected_responses(self, mock_post):
         expected = self.EXPECTED_ANSWERS[
             "What are the business hours for customer support?"
         ]
-        response = MagicMock()
-        response.text = expected
-        agent.llm.complete.return_value = response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": expected}}]
+        }
+        mock_post.return_value = mock_response
+
+        agent = QAAgent.__new__(QAAgent)
+        agent.api_key = "test"
+        agent.session = MagicMock()
+        agent.session.post = mock_post
+        agent.model_name = "test_model"
+        agent.api_base = "http://test.com"
 
         actual = agent.answer(
             "What are the business hours for customer support?",
@@ -129,7 +133,7 @@ class TestMainCLIEval(TestEvalSuite):
     @patch("main.DocumentRetriever")
     @patch("main.QAAgent")
     def test_main_prints_eval_answer(self, MockAgent, MockRetriever, mock_input):
-        self._setup_cli_mocks(MockRetriever, MockAgent, "What are the business hours?")
+        self._setup_cli_mocks(MockRetriever, MockAgent, self.EXPECTED_ANSWERS["What are the business hours for customer support?"])
         mock_input.side_effect = [
             "What are the business hours for customer support?",
             "exit"

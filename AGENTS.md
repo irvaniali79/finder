@@ -5,7 +5,7 @@ Build a simple RAG-based Q&A system that answers questions using documents in `d
 
 ## 📄 Business Requirement Document
 The single source of truth is `./SSOT.md`. All features, tests, and evaluations must conform to it.
-## Tech requirements: `./TECHDECISIONS.md`
+## Tech requirements: `./DESIGN.md`
 
 ## 📁 Mandatory Repository Structure
 - `docs/`: at least 3 plain-text files (FAQ, leave policy, product guide)

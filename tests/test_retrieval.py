@@ -56,16 +56,14 @@ class TestDocumentRetriever(unittest.TestCase):
                 mock_reader.load_data.assert_called_once_with(mock_file)
 
     def test_load_documents_empty_dir(self):
-        with patch("retrieval.Path") as MockPath:
-            mock_path_instance = MockPath.return_value
-            mock_path_instance.iterdir.return_value = iter([])
+        with patch.object(self.retriever.docs_path, "iterdir", return_value=iter([])):
             docs = self.retriever.load_documents()
             self.assertEqual(docs, [])
 
     def test_chunk_documents(self):
-        with patch("retrieval.SentenceSplitter") as MockSplitter:
-            splitter = MockSplitter.return_value
-            splitter.get_nodes.return_value = ["node1", "node2"]
+        mock_splitter = MagicMock()
+        mock_splitter.get_nodes_from_documents.return_value = ["node1", "node2"]
+        with patch("retrieval.SentenceSplitter", return_value=mock_splitter):
             docs = ["doc1"]
             nodes = self.retriever.chunk_documents(docs)
             self.assertEqual(nodes, ["node1", "node2"])
