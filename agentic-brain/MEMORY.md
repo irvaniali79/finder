@@ -42,3 +42,7 @@
 - Need to add proper error handling for edge cases
 - Should add validation for empty queries
 - Could improve chunking strategy based on document structure
+
+## Environment Loading (Bootstrapping)
+- `src/main.py` now calls `load_dotenv()` at startup so `.env` values are loaded automatically
+- `python-dotenv` was added to `requirements.txt` because it was missing

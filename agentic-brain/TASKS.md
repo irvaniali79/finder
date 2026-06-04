@@ -55,3 +55,10 @@
 - **Key functions**: load_documents(), setup(), compute_file_fingerprint(), _save_state(), _load_state(), clear_cache()
 - **Tests**: tests/test_retrieval.py
 - [x] Task complete
+
+## Feature 9: Disk-Backed Chunk Store for Large Documents
+- **Dependencies**: Feature 8
+- **Affected files**: src/retrieval.py, tests/test_retrieval.py, agentic-brain/MEMORY.md, agentic-brain/AGENT_CONTEXT.md
+- **Key functions**: ChunkStore.__init__(), ChunkStore.add(), ChunkStore.get(), ChunkStore.get_many(), DocumentRetriever.setup(), DocumentRetriever.retrieve()
+- **Tests**: tests/test_retrieval.py
+- [ ] Task complete

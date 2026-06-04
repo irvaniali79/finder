@@ -1,8 +1,8 @@
+python-dotenv>=1.0.0
+numpy>=1.24.0
+sentence-transformers>=2.2.0
 llama-index>=0.10.0
-llama-index-llms-ollama>=0.1.0
-llama-index-embeddings-huggingface>=0.1.0
 llama-index-readers-file>=0.1.0
+llama-index-embeddings-huggingface>=0.1.0
 pypdf>=4.0.0
 faiss-cpu>=1.7.0
-sentence-transformers>=2.2.0
-numpy>=1.24.0

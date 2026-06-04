@@ -1,8 +1,8 @@
 import hashlib
 import json
-import pickle
+import sqlite3
 from pathlib import Path
-from llama_index.core import Document, SimpleDirectoryReader
+from llama_index.core import Document
 from llama_index.core.text_splitter import SentenceSplitter
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.readers.file import PDFReader
@@ -11,6 +11,75 @@ import numpy as np
 
 
 SUPPORTED_SUFFIXES = {".md", ".txt", ".pdf"}
+
+
+class ChunkStore:
+    def __init__(self, db_path):
+        self.db_path = Path(db_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._conn = sqlite3.connect(str(self.db_path))
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS chunks (
+                id INTEGER PRIMARY KEY,
+                text TEXT NOT NULL,
+                file_name TEXT
+            )
+            """
+        )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_chunks_file_name ON chunks(file_name)"
+        )
+        self._conn.commit()
+        self._next_id = int(
+            self._conn.execute("SELECT COALESCE(MAX(id), -1) + 1 FROM chunks").fetchone()[0]
+        )
+
+    def add(self, chunks):
+        if not chunks:
+            return []
+        ids = []
+        rows = [
+            (self._next_id + i, c["text"], c["metadata"].get("file_name", ""))
+            for i, c in enumerate(chunks)
+        ]
+        self._conn.executemany(
+            "INSERT INTO chunks (id, text, file_name) VALUES (?, ?, ?)", rows
+        )
+        ids = [r[0] for r in rows]
+        self._next_id += len(rows)
+        self._conn.commit()
+        return ids
+
+    def get(self, id):
+        row = self._conn.execute(
+            "SELECT text, file_name FROM chunks WHERE id = ?", (id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return {"text": row[0], "file_name": row[1]}
+
+    def get_many(self, ids):
+        if not ids:
+            return []
+        placeholders = ",".join("?" * len(ids))
+        rows = self._conn.execute(
+            f"SELECT id, text, file_name FROM chunks WHERE id IN ({placeholders})",
+            ids,
+        ).fetchall()
+        id_to_chunk = {r[0]: {"text": r[1], "file_name": r[2]} for r in rows}
+        return [id_to_chunk.get(i) for i in ids]
+
+    def count(self):
+        return int(self._conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0])
+
+    def clear(self):
+        self._conn.execute("DELETE FROM chunks")
+        self._conn.commit()
+        self._next_id = 0
+
+    def close(self):
+        self._conn.close()
 
 
 class DocumentRetriever:
@@ -24,7 +93,7 @@ class DocumentRetriever:
         self.cache_dir = Path(cache_dir)
         self.embed_model = HuggingFaceEmbedding(model_name=embed_model_name)
         self.index = None
-        self.chunks = []
+        self.chunk_store = None
         self.state = {}
 
     def _ensure_cache_dir(self):
@@ -36,8 +105,13 @@ class DocumentRetriever:
     def _index_path(self):
         return self.cache_dir / "faiss.index"
 
-    def _chunks_path(self):
-        return self.cache_dir / "chunks.pkl"
+    def _chunk_db_path(self):
+        return self.cache_dir / "chunks.db"
+
+    def _open_chunk_store(self):
+        if self.chunk_store is None:
+            self.chunk_store = ChunkStore(self._chunk_db_path())
+        return self.chunk_store
 
     @staticmethod
     def compute_file_fingerprint(path):
@@ -91,31 +165,39 @@ class DocumentRetriever:
         if self.index is None:
             return
         faiss.write_index(self.index, str(self._index_path()))
-        with open(self._chunks_path(), "wb") as f:
-            pickle.dump(self.chunks, f)
 
     def _restore_index(self):
         index_path = self._index_path()
-        chunks_path = self._chunks_path()
-        if not (index_path.exists() and chunks_path.exists()):
+        if not index_path.exists():
             return False
         try:
             self.index = faiss.read_index(str(index_path))
-            with open(chunks_path, "rb") as f:
-                self.chunks = pickle.load(f)
+            self._open_chunk_store()
+            if self.chunk_store.count() != self.index.ntotal:
+                self.index = None
+                self.chunk_store.clear()
+                self.chunk_store = None
+                return False
             return True
         except Exception:
             self.index = None
-            self.chunks = []
+            if self.chunk_store is not None:
+                self.chunk_store.clear()
+                self.chunk_store = None
             return False
 
     def clear_cache(self):
         self.state = {}
-        self.chunks = []
+        if self.chunk_store is not None:
+            self.chunk_store.clear()
+            self.chunk_store = None
         self.index = None
-        for path in (self._state_path(), self._index_path(), self._chunks_path()):
+        for path in (self._state_path(), self._index_path(), self._chunk_db_path()):
             if path.exists():
                 path.unlink()
+        legacy_pkl = self.cache_dir / "chunks.pkl"
+        if legacy_pkl.exists():
+            legacy_pkl.unlink()
 
     def chunk_documents(self, documents):
         if not documents:
@@ -126,7 +208,6 @@ class DocumentRetriever:
         for node in nodes:
             metadata = dict(node.metadata) if node.metadata else {}
             chunk_dicts.append({"text": node.text, "metadata": metadata})
-        self.chunks = chunk_dicts
         return chunk_dicts
 
     def create_embeddings(self, chunks):
@@ -142,21 +223,27 @@ class DocumentRetriever:
         self.index.add(embeddings)
 
     def retrieve(self, query, top_k=3):
-        if self.index is None or not self.chunks:
+        if self.index is None or self.chunk_store is None or self.chunk_store.count() == 0:
             return []
         query_emb = self.embed_model.get_text_embedding(query)
         query_vector = np.array([query_emb]).astype("float32")
         distances, indices = self.index.search(query_vector, top_k)
+        ids = [int(i) for i in indices[0]]
+        chunks = self.chunk_store.get_many(ids)
         results = []
-        for i in range(len(indices[0])):
-            idx = int(indices[0][i])
-            if 0 <= idx < len(self.chunks):
-                results.append((self.chunks[idx]["text"], float(distances[0][i])))
+        for chunk, dist in zip(chunks, distances[0]):
+            if chunk is not None:
+                results.append((chunk["text"], float(dist)))
         return results
 
     def _build_full_index(self):
+        store = self._open_chunk_store()
+        store.clear()
+        self._next_id = 0
+
         documents = self.load_documents()
         chunks = self.chunk_documents(documents)
+        ids = store.add(chunks)
         embeddings = self.create_embeddings(chunks)
         self.index = None
         self.build_index(embeddings)
@@ -175,6 +262,7 @@ class DocumentRetriever:
         self.state = new_state
 
     def _append_chunks_for_files(self, files):
+        store = self._open_chunk_store()
         documents = []
         for path in files:
             documents.extend(self._read_file_as_documents(path))
@@ -187,9 +275,9 @@ class DocumentRetriever:
             metadata = dict(node.metadata) if node.metadata else {}
             new_chunks.append({"text": node.text, "metadata": metadata})
 
+        store.add(new_chunks)
         embeddings = self.create_embeddings(new_chunks)
         self.build_index(embeddings)
-        self.chunks.extend(new_chunks)
 
         counts = {}
         for chunk in new_chunks:

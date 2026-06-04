@@ -47,10 +47,14 @@ class TestDocumentRetrieverEval(TestEvalSuite):
         retriever.embed_model = MagicMock()
         retriever.index = MagicMock()
 
-        retriever.chunks = [
-            {"text": text, "metadata": {"file_name": f"doc_{i}.md"}}
-            for i, text in enumerate(doc_texts)
+        store = MagicMock()
+        store.count.return_value = len(doc_texts)
+        store.get_many.side_effect = lambda ids: [
+            {"text": doc_texts[i], "file_name": f"doc_{i}.md"}
+            if 0 <= i < len(doc_texts) else None
+            for i in ids
         ]
+        retriever.chunk_store = store
         return retriever
 
     def test_retriever_returns_eval_evidence(self):
@@ -82,23 +86,29 @@ class TestDocumentRetrieverEval(TestEvalSuite):
         retriever.docs_path = "tests/fixtures"
         retriever.cache_dir = MagicMock()
         retriever.embed_model = MagicMock()
-        retriever.chunks = []
+        retriever.chunk_store = None
         retriever.state = {}
 
-        with patch.object(retriever, "_list_supported_files", return_value=[], ), \
+        with patch.object(retriever, "_list_supported_files", return_value=[]), \
              patch.object(retriever, "_load_state"), \
              patch.object(retriever, "_restore_index", return_value=False), \
              patch.object(retriever, "_save_state"), \
              patch.object(retriever, "_persist_index"), \
+             patch.object(retriever, "_open_chunk_store") as open_store_mock, \
              patch.object(retriever, "load_documents", return_value=["d1"]) as load_mock, \
              patch.object(retriever, "chunk_documents", return_value=[
                  {"text": "n1", "metadata": {"file_name": "a.md"}},
                  {"text": "n2", "metadata": {"file_name": "a.md"}},
              ]) as chunk_mock, \
              patch.object(retriever, "create_embeddings", return_value=np.array([[0.5, 0.5], [0.6, 0.6]], dtype="float32")) as emb_mock:
+            store = MagicMock()
+            store.count.return_value = 0
+            store.add.return_value = [0, 1]
+            open_store_mock.return_value = store
             retriever.setup()
             load_mock.assert_called_once()
             chunk_mock.assert_called_once_with(["d1"])
+            store.add.assert_called_once()
             self.assertIsInstance(retriever.index, faiss.IndexFlatL2)
             self.assertEqual(retriever.index.ntotal, 2)
 
