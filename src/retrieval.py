@@ -359,15 +359,7 @@ class DocumentRetriever:
             documents.extend(self._read_file_as_documents(path))
         if not documents:
             return
-        new_chunks = []
-        splitter = SentenceSplitter(chunk_size=512, chunk_overlap=50)
-        nodes = splitter.get_nodes_from_documents(documents)
-        for node in nodes:
-            metadata = dict(node.metadata) if node.metadata else {}
-            file_name = metadata.get("file_name", "")
-            extracted = extract_chunk_metadata(node.text, file_name)
-            merged = {**metadata, **extracted}
-            new_chunks.append({"text": node.text, "metadata": merged})
+        new_chunks = self.chunk_documents(documents)
 
         store.add(new_chunks)
         embeddings = self.create_embeddings(new_chunks)

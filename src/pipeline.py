@@ -1,8 +1,8 @@
 import re
 
 import numpy as np
-from retrieval import DocumentRetriever
-from preprocessor import expand_query, combine_query_embeddings, extract_tags
+from src.retrieval import DocumentRetriever
+from src.preprocessor import expand_query, combine_query_embeddings, extract_tags
 
 
 VARIANT_FEATURES = {

@@ -1,18 +1,15 @@
 import sys
 from dotenv import load_dotenv
 load_dotenv()
-from src.retrieval import DocumentRetriever
+from src.pipeline import build_pipeline
 from src.agent import QAAgent
 
 def main():
     print("Company Knowledge Bot - Ask me anything about our policies and products!")
     print("Type 'exit' or 'quit' to stop.\n")
-    
-    retriever = DocumentRetriever()
+
+    pipeline = build_pipeline(variant="V5")
     agent = QAAgent()
-    
-    print("Loading knowledge base...")
-    retriever.setup()
     print("Ready! Knowledge base loaded.\n")
     
     while True:
@@ -25,7 +22,7 @@ def main():
         if not query:
             continue
         
-        chunks = retriever.retrieve(query, top_k=3)
+        chunks = pipeline.retrieve(query)
         answer = agent.answer(query, chunks)
         
         print("\nAnswer: {}\n".format(answer))

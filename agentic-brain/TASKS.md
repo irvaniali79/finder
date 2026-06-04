@@ -104,7 +104,7 @@
 - **Key functions**: main(), build_pipeline(), Pipeline.retrieve()
 - **Tests**: tests/test_main.py
 - **Details**: `main.py` currently calls `DocumentRetriever.retrieve()` directly, bypassing the advanced retrieval features. Update to use `build_pipeline(variant="V5")` to enable tag filtering, summary boost, query expansion, and reranking in the CLI.
-- [ ] Task complete
+- [x] Task complete
 
 ## Feature 16: Unify Import Conventions Across src/
 - **Dependencies**: None
@@ -112,7 +112,7 @@
 - **Key functions**: N/A (module-level imports)
 - **Tests**: tests/test_pipeline.py
 - **Details**: `pipeline.py` uses bare imports (`from retrieval import ...`, `from preprocessor import ...`), while `main.py` and `retrieval.py` use the `src.` prefix. Change `pipeline.py` to use `from src.retrieval import ...` to match the project convention and prevent `ModuleNotFoundError` when imported from the project root.
-- [ ] Task complete
+- [x] Task complete
 
 ## Feature 17: De-duplicate Chunking Logic in retrieval.py
 - **Dependencies**: None
@@ -120,4 +120,4 @@
 - **Key functions**: chunk_documents(), _append_chunks_for_files()
 - **Tests**: tests/test_retrieval.py
 - **Details**: `chunk_documents()` and `_append_chunks_for_files()` contain identical chunking logic (instantiating `SentenceSplitter`, iterating `get_nodes_from_documents`, calling `extract_chunk_metadata`). Refactor `_append_chunks_for_files()` to reuse `chunk_documents()`.
-- [ ] Task complete
+- [x] Task complete

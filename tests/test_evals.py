@@ -5,10 +5,10 @@ from unittest.mock import MagicMock, patch, call
 import numpy as np
 import faiss
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from retrieval import DocumentRetriever
-from agent import QAAgent
+from src.retrieval import DocumentRetriever
+from src.agent import QAAgent
 
 
 class TestEvalSuite(unittest.TestCase):
@@ -122,7 +122,7 @@ class TestQAAgentEval(TestEvalSuite):
         self.assertIn("We are open Monday through Friday", prompt)
         self.assertIn("What are the business hours", prompt)
 
-    @patch("agent.requests.Session.post")
+    @patch("src.agent.requests.Session.post")
     def test_agent_answer_with_expected_responses(self, mock_post):
         expected = self.EXPECTED_ANSWERS[
             "What are the business hours for customer support?"
@@ -148,29 +148,29 @@ class TestQAAgentEval(TestEvalSuite):
 
 
 class TestMainCLIEval(TestEvalSuite):
-    @patch("main.input")
-    @patch("main.DocumentRetriever")
-    @patch("main.QAAgent")
-    def test_main_prints_eval_answer(self, MockAgent, MockRetriever, mock_input):
-        self._setup_cli_mocks(MockRetriever, MockAgent, self.EXPECTED_ANSWERS["What are the business hours for customer support?"])
+    @patch("src.main.input")
+    @patch("src.main.build_pipeline")
+    @patch("src.main.QAAgent")
+    def test_main_prints_eval_answer(self, MockAgent, MockPipeline, mock_input):
+        self._setup_cli_mocks(MockPipeline, MockAgent, self.EXPECTED_ANSWERS["What are the business hours for customer support?"])
         mock_input.side_effect = [
             "What are the business hours for customer support?",
             "exit"
         ]
         captured = []
         with patch("builtins.print", side_effect=lambda *args, **kwargs: captured.append(" ".join(map(str, args)))):
-            from main import main
+            from src.main import main
             main()
         self.assertTrue(any(
             "We are open Monday through Friday, 9 AM to 6 PM EST" in line
             for line in captured
         ))
 
-    @patch("main.input")
-    @patch("main.DocumentRetriever")
-    @patch("main.QAAgent")
-    def test_main_exits_on_quit(self, MockAgent, MockRetriever, mock_input):
-        from main import main
+    @patch("src.main.input")
+    @patch("src.main.build_pipeline")
+    @patch("src.main.QAAgent")
+    def test_main_exits_on_quit(self, MockAgent, MockPipeline, mock_input):
+        from src.main import main
         mock_input.side_effect = ["quit"]
         called = []
         with patch("builtins.print", side_effect=lambda *args, **kwargs: called.append(args[0] if args else "")):
@@ -178,10 +178,9 @@ class TestMainCLIEval(TestEvalSuite):
         self.assertTrue(any("Goodbye" in (c or "") for c in called))
 
     @staticmethod
-    def _setup_cli_mocks(MockRetriever, MockAgent, answer_text):
-        retriever = MockRetriever.return_value
-        retriever.retrieve.return_value = [(answer_text, 0.1)]
-        retriever.setup.return_value = retriever
+    def _setup_cli_mocks(MockPipeline, MockAgent, answer_text):
+        pipeline = MockPipeline.return_value
+        pipeline.retrieve.return_value = [(answer_text, 0.1, {"file_name": "faq.md"})]
         agent = MockAgent.return_value
         agent.answer.return_value = answer_text
 
