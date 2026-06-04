@@ -192,6 +192,15 @@ class TestDocumentRetriever(unittest.TestCase):
         store.add.side_effect = lambda cs: list(range(len(cs)))
         return store
 
+    def _make_chunk(self, text, file_name="a.md", tags=None, summary="", importance=0.0):
+        return {
+            "text": text,
+            "file_name": file_name,
+            "tags": tags or [],
+            "summary": summary,
+            "importance": importance,
+        }
+
     def test_load_documents_md(self):
         self._write("test.md", "# md content")
         docs = self.retriever.load_documents()
@@ -297,8 +306,8 @@ class TestDocumentRetriever(unittest.TestCase):
     def test_retrieve_returns_top_k_chunks(self):
         self.retriever.embed_model.get_text_embedding.return_value = [0.0, 0.0]
         self.retriever.chunk_store = self._mock_store([
-            {"text": "chunk one", "file_name": "a.md"},
-            {"text": "chunk two", "file_name": "a.md"},
+            self._make_chunk("chunk one", "a.md"),
+            self._make_chunk("chunk two", "a.md"),
         ])
         self.retriever.index = MagicMock()
         self.retriever.index.search.return_value = (
@@ -309,6 +318,9 @@ class TestDocumentRetriever(unittest.TestCase):
         self.assertEqual(len(results), 2)
         self.assertEqual(results[0][0], "chunk one")
         self.assertEqual(results[1][0], "chunk two")
+        self.assertIsInstance(results[0][1], float)
+        self.assertIsInstance(results[0][2], dict)
+        self.assertEqual(results[0][2]["file_name"], "a.md")
 
     def test_retrieve_empty_index(self):
         self.assertEqual(self.retriever.retrieve("query"), [])

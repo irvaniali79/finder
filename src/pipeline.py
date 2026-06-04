@@ -160,7 +160,16 @@ class Pipeline:
         candidates = self.retrieve_top_n(query, n=self.top_n)
         reranked = self.rerank(candidates, query, importance_fn=importance_fn)
         trimmed = reranked[:k]
-        return [(c["text"], c["distance"]) for c in trimmed]
+        return [(c["text"], c["distance"], self._candidate_metadata(c)) for c in trimmed]
+
+    @staticmethod
+    def _candidate_metadata(candidate):
+        return {
+            "file_name": candidate.get("file_name", ""),
+            "tags": candidate.get("tags", []) or [],
+            "summary": candidate.get("summary", "") or "",
+            "importance": float(candidate.get("importance", 0.0) or 0.0),
+        }
 
     def _build_importance_fn(self, user_fn):
         def _fn(candidate):
@@ -180,7 +189,7 @@ class Pipeline:
             candidates = self._filter_by_tags(query, candidates)
         if "summary_embedding" in self.features:
             candidates = self._boost_by_summary(query, candidates)
-        return [(c["text"], c["distance"]) for c in candidates]
+        return [(c["text"], c["distance"], self._candidate_metadata(c)) for c in candidates]
 
 
 def build_pipeline(variant="V0", docs_path="docs/", cache_dir=".cache", **options):

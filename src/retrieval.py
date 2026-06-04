@@ -318,7 +318,13 @@ class DocumentRetriever:
         results = []
         for chunk, dist in zip(chunks, distances[0]):
             if chunk is not None:
-                results.append((chunk["text"], float(dist)))
+                metadata = {
+                    "file_name": chunk.get("file_name", ""),
+                    "tags": chunk.get("tags", []) or [],
+                    "summary": chunk.get("summary", "") or "",
+                    "importance": float(chunk.get("importance", 0.0) or 0.0),
+                }
+                results.append((chunk["text"], float(dist), metadata))
         return results
 
     def _build_full_index(self):

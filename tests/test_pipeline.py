@@ -161,9 +161,10 @@ class TestPipelineQueryExpansion(unittest.TestCase):
         p = Pipeline(retriever, variant="V3", top_k=3)
         results = p.retrieve("What is the leave policy?")
         self.assertEqual(len(results), 3)
-        for text, dist in results:
+        for text, dist, metadata in results:
             self.assertIsInstance(text, str)
             self.assertIsInstance(dist, float)
+            self.assertIsInstance(metadata, dict)
 
     def test_v4_runs_rerank_stage(self):
         retriever = self._make_retriever()
@@ -182,10 +183,12 @@ class TestPipelineQueryExpansion(unittest.TestCase):
         retriever.chunk_store = store
         p = Pipeline(retriever, variant="V4", top_k=3, top_n=5)
         results = p.retrieve("query")
+
         self.assertEqual(len(results), 3)
-        for text, dist in results:
+        for text, dist, metadata in results:
             self.assertIsInstance(text, str)
             self.assertIsInstance(dist, float)
+            self.assertIsInstance(metadata, dict)
 
     def test_v5_runs_rerank_with_importance(self):
         retriever = self._make_retriever()
@@ -386,9 +389,10 @@ class TestRetrieveTopK(unittest.TestCase):
         p = Pipeline(retriever, variant="V4", top_k=3, top_n=6)
         results = p.retrieve_top_k("query", k=3)
         self.assertEqual(len(results), 3)
-        for text, dist in results:
+        for text, dist, metadata in results:
             self.assertIsInstance(text, str)
             self.assertIsInstance(dist, float)
+            self.assertIsInstance(metadata, dict)
 
     def test_uses_default_top_k(self):
         retriever = self._make_retriever(n=10)
@@ -407,7 +411,7 @@ class TestRetrieveTopK(unittest.TestCase):
         p = Pipeline(retriever, variant="V4", top_k=2, top_n=4)
         results = p.retrieve_top_k("query", k=2)
         for item in results:
-            self.assertEqual(len(item), 2)
+            self.assertEqual(len(item), 3)
 
 
 class TestMetadataVariants(unittest.TestCase):

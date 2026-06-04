@@ -99,6 +99,13 @@
 - Optional: replace stopword tag extractor with an LLM-based tagger when not on a tight budget
 - Optional: replace heuristic rerank with a cross-encoder once one is available locally
 
+## Propagate Chunk Metadata Through Production Path (Feature 14)
+- Modified `DocumentRetriever.retrieve()` to return 3-tuples: `(text, distance, metadata)`.
+- Modified `Pipeline.retrieve()` and `Pipeline.retrieve_top_k()` to also return 3-tuples: `(text, distance, metadata)`. This ensures that whichever retriever path is used, metadata is preserved and passed to the QA Agent.
+- Updated `tests/test_retrieval.py` and `tests/test_pipeline.py` to assert the 3-tuple shape and metadata contents.
+- Updated `tests/test_evals.py` to unpack the 3-tuple retrieved chunks correctly.
+- All 103 tests in the suite pass successfully.
+
 ## Environment Loading (Bootstrapping)
 - `src/main.py` now calls `load_dotenv()` at startup so `.env` values are loaded automatically
 - `python-dotenv` was added to `requirements.txt` because it was missing

@@ -77,9 +77,10 @@ class TestDocumentRetrieverEval(TestEvalSuite):
             with self.subTest(question=question):
                 chunks = retriever.retrieve(question, top_k=5)
                 self.assertTrue(len(chunks) > 0, f"No chunks for: {question}")
-                for chunk_text, distance in chunks:
+                for chunk_text, distance, metadata in chunks:
                     self.assertIsInstance(chunk_text, str)
                     self.assertIsInstance(distance, float)
+                    self.assertIsInstance(metadata, dict)
 
     def test_retriever_setup_pipeline(self):
         retriever = DocumentRetriever.__new__(DocumentRetriever)

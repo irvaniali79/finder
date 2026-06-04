@@ -17,9 +17,15 @@ Mini Company Knowledge Bot - a RAG-based CLI Q&A system backed by the docs/ know
   - V4: V3 + two-stage rerank (similarity + importance + diversity penalty)
   - V5: V4 + per-chunk importance weighting from metadata
 - `Pipeline.retrieve_top_n`, `Pipeline.rerank`, and `Pipeline.retrieve_top_k` provide the two-stage retrieval path
+- `DocumentRetriever.retrieve()`, `Pipeline.retrieve()`, and `Pipeline.retrieve_top_k()` return 3-tuples: `(text, distance, metadata)`, which preserves ingestion-time metadata (`file_name`, `summary`, `tags`, `importance`) and propagates it all the way to `QAAgent` for prompt formatting in production.
 - Query preprocessing (`src/preprocessor.py`) provides `extract_tags`, `expand_query` (≤3 variants), `detect_question_intent`, and `combine_query_embeddings`
 - `.cache/` is git-ignored; use `DocumentRetriever.clear_cache()` to force a full rebuild
-- Test coverage in `tests/test_retrieval.py`, `tests/test_agent.py`, `tests/test_main.py`, `tests/test_evals.py`, `tests/test_pipeline.py`
+- Test coverage in `tests/test_retrieval.py`, `tests/test_agent.py`, `tests/test_main.py`, `tests/test_evals.py`, `tests/test_pipeline.py` (103 tests passing)
+
+## Pending Integration Tasks
+- **Feature 15**: `main.py` bypasses `Pipeline` and calls `DocumentRetriever.retrieve()` directly. Needs wiring to `build_pipeline(variant="V5")` to enable advanced retrieval in the CLI.
+- **Feature 16**: `pipeline.py` uses bare imports (`from retrieval import ...`), conflicting with the `src.` prefix convention used by `main.py` and `retrieval.py`.
+- **Feature 17**: `retrieval.py` has duplicated chunking logic between `chunk_documents()` and `_append_chunks_for_files()`.
 
 ## Notable Constraints
 - Local development tests require installed packages (`pytest`, `numpy`, `faiss-cpu`, etc.)

@@ -90,3 +90,34 @@
 - **Key functions**: extract_chunk_metadata(), ChunkStore.add(), _filter_by_tags(), _boost_by_summary()
 - **Tests**: tests/test_retrieval.py, tests/test_agent.py, tests/test_pipeline.py
 - [x] Task complete
+
+## Feature 14: Propagate Chunk Metadata Through Production Path
+- **Dependencies**: Feature 13
+- **Affected files**: src/retrieval.py, src/main.py, tests/test_retrieval.py, tests/test_main.py
+- **Key functions**: DocumentRetriever.retrieve(), main()
+- **Tests**: tests/test_retrieval.py, tests/test_main.py
+- [x] Task complete
+
+## Feature 15: Wire Pipeline into main.py
+- **Dependencies**: Feature 14
+- **Affected files**: src/main.py, tests/test_main.py
+- **Key functions**: main(), build_pipeline(), Pipeline.retrieve()
+- **Tests**: tests/test_main.py
+- **Details**: `main.py` currently calls `DocumentRetriever.retrieve()` directly, bypassing the advanced retrieval features. Update to use `build_pipeline(variant="V5")` to enable tag filtering, summary boost, query expansion, and reranking in the CLI.
+- [ ] Task complete
+
+## Feature 16: Unify Import Conventions Across src/
+- **Dependencies**: None
+- **Affected files**: src/pipeline.py, tests/test_pipeline.py
+- **Key functions**: N/A (module-level imports)
+- **Tests**: tests/test_pipeline.py
+- **Details**: `pipeline.py` uses bare imports (`from retrieval import ...`, `from preprocessor import ...`), while `main.py` and `retrieval.py` use the `src.` prefix. Change `pipeline.py` to use `from src.retrieval import ...` to match the project convention and prevent `ModuleNotFoundError` when imported from the project root.
+- [ ] Task complete
+
+## Feature 17: De-duplicate Chunking Logic in retrieval.py
+- **Dependencies**: None
+- **Affected files**: src/retrieval.py, tests/test_retrieval.py
+- **Key functions**: chunk_documents(), _append_chunks_for_files()
+- **Tests**: tests/test_retrieval.py
+- **Details**: `chunk_documents()` and `_append_chunks_for_files()` contain identical chunking logic (instantiating `SentenceSplitter`, iterating `get_nodes_from_documents`, calling `extract_chunk_metadata`). Refactor `_append_chunks_for_files()` to reuse `chunk_documents()`.
+- [ ] Task complete
