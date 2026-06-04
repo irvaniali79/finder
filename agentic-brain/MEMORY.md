@@ -64,6 +64,18 @@
 - V3 still raises `NotImplementedError` because its other features (`tag_filtering`, `summary_embedding`) are F13; the expansion logic is exercised via direct pipeline tests
 - Trade-off: keyword extraction is heuristic (no LLM call). The DESIGN.md says "using small local LLM" but for the MVP this keeps preprocessing deterministic and free; an LLM-based extractor can be added later behind the same `extract_tags` signature
 
+## Two-Stage Retrieval with Re-Ranking (Feature 12)
+- `Pipeline` gained three new methods: `retrieve_top_n`, `rerank`, and `retrieve_top_k`
+- `retrieve_top_n(query, n=20)` returns a list of candidate dicts `{"text", "distance", "file_name"}` (richer than the `(text, distance)` tuple form so the reranker has more signal)
+- `Pipeline.rerank(candidates, query, importance_fn=None)` is a static, side-effect-free function. It min-max normalizes FAISS L2 distance into a [0,1] similarity, then computes `score = 0.7 * sim + 0.3 * importance − 0.1 * (file_seen_count − 1)`. The per-file penalty is an MMR-style diversity signal that prevents top‑K from being dominated by chunks of one document
+- `importance_fn` is optional; F13 will hook it up once chunks carry an importance score. The default of 0.0 means rerank degenerates to a similarity+diversity reorder, which is still a meaningful second stage
+- `retrieve_top_k(query, k=5)` chains the two: top-N → rerank → top-K, returns the same `(text, distance)` tuple shape the rest of the system already expects
+- `Pipeline.retrieve()` now dispatches to the rerank path whenever `"rerank"` is in the variant features, so V4 and V5 actually run end-to-end (the F13 metadata features are passive until F13 lands — they don't block the rerank path)
+- V0 still uses the original `_search`; V1/V2/V3 still raise `NotImplementedError` pointing at F13
+- 19 new unit tests in `tests/test_pipeline.py` (4 retrieval-stage tests, 6 rerank tests, 4 retrieve_top_k tests, plus updated V4/V5 tests)
+- All 83 tests in the suite pass
+- Trade-off: rerank is heuristic (no cross-encoder, no LLM judge). It's cheap, deterministic, and gives us a working ablation hook. A real cross-encoder can be dropped in behind the same `rerank` signature later
+
 ## Pending Improvements
 - Need to add proper error handling for edge cases
 - Should add validation for empty queries
@@ -71,6 +83,7 @@
 - Consider purging old chunk versions for a file when it changes (or rebuilding the index)
 - Wire RAGAS/DeepEval ablation runner once F13 lands
 - Optional: replace stopword tag extractor with an LLM-based tagger when not on a tight budget
+- Optional: replace heuristic rerank with a cross-encoder once one is available locally
 
 ## Environment Loading (Bootstrapping)
 - `src/main.py` now calls `load_dotenv()` at startup so `.env` values are loaded automatically

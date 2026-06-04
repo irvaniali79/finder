@@ -82,7 +82,7 @@
 - **Affected files**: src/pipeline.py, tests/test_pipeline.py
 - **Key functions**: retrieve_top_n(), rerank(), retrieve_top_k()
 - **Tests**: tests/test_pipeline.py
-- [ ] Task complete
+- [x] Task complete
 
 ## Feature 13: Per-Chunk Metadata Extraction
 - **Dependencies**: Feature 12
