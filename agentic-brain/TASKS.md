@@ -121,3 +121,54 @@
 - **Tests**: tests/test_retrieval.py
 - **Details**: `chunk_documents()` and `_append_chunks_for_files()` contain identical chunking logic (instantiating `SentenceSplitter`, iterating `get_nodes_from_documents`, calling `extract_chunk_metadata`). Refactor `_append_chunks_for_files()` to reuse `chunk_documents()`.
 - [x] Task complete
+
+## Feature 18: Domain-Driven Codebase Refactoring
+- **Dependencies**: Feature 17
+- **Affected files**: src/retrieval.py, src/pipeline.py, src/preprocessor.py, src/agent.py, src/storage.py (new), src/ingestion.py (new), src/reranking.py (new), src/query.py (new), src/generation.py (new), tests/test_retrieval.py, tests/test_pipeline.py, tests/test_agent.py, tests/test_evals.py
+- **Key functions**: All (refactoring across the board)
+- **Tests**: All test files
+- **Details**: The current `retrieval.py` (401 lines) is a god module holding 5+ distinct concerns: document loading, chunking, metadata extraction, ChunkStore (SQLite), FAISS index management, fingerprinting/state persistence, embedding generation, and search. `pipeline.py` mixes orchestration with domain logic (filtering, reranking). `preprocessor.py` and `agent.py` have unclear names. This refactoring splits code into domain packages with single responsibilities and updates all imports.
+- **New structure**:
+  ```
+  src/
+    storage.py       # ChunkStore (SQLite) — extracted from retrieval.py
+    ingestion.py     # load_documents, chunk_documents, extract_chunk_metadata — extracted from retrieval.py
+    retrieval.py     # DocumentRetriever (orchestration + search + index mgmt + state) — slimmed
+    query.py         # extract_tags, expand_query, etc. — renamed from preprocessor.py
+    generation.py    # QAAgent — renamed from agent.py
+    reranking.py     # _filter_by_tags, _boost_by_summary, rerank — extracted from pipeline.py
+    pipeline.py      # Pipeline orchestration (variant dispatch) — slimmed
+    main.py          # CLI entry point (unchanged)
+  ```
+- **Sub-task A: Extract ChunkStore into src/storage.py**
+  - Move `ChunkStore` class and its helpers (`_encode_metadata`, `_row_to_chunk`, `_migrate_add_metadata_columns`) from `retrieval.py` into new `src/storage.py`
+  - Update `retrieval.py` to import from `src.storage`
+  - Update tests to import from `src.storage` where needed
+  - Tests: test_retrieval.py (TestChunkStore)
+  - [x] Task complete
+- **Sub-task B: Extract Ingestion into src/ingestion.py**
+  - Move `load_documents()`, `_read_file_as_documents()`, `_list_supported_files()`, `chunk_documents()`, `extract_chunk_metadata()`, `SUPPORTED_SUFFIXES` and module-level constants from `retrieval.py` into new `src/ingestion.py`
+  - Move static helper `compute_file_fingerprint()` (it is a file-level concern)
+  - Update `retrieval.py` to import from `src.ingestion`
+  - Update tests to import from `src.ingestion`
+  - Tests: test_retrieval.py (TestExtractChunkMetadata, relevant TestDocumentRetriever methods)
+  - [ ] Task complete
+- **Sub-task C: Extract Reranking + Filtering into src/reranking.py**
+  - Move `_query_word_set()`, `_summary_match_count()`, `_filter_by_tags()` (as standalone function), `_boost_by_summary()` (as standalone function), `Pipeline.rerank()` (as standalone `rerank()` function) from `pipeline.py` into new `src/reranking.py`
+  - `Pipeline.retrieve()` and `Pipeline.retrieve_top_k()` stay in `pipeline.py` but delegate to `src.reranking`
+  - Tests: test_pipeline.py (TestRerank, parts of TestRetrieveTopK, TestMetadataVariants)
+  - [ ] Task complete
+- **Sub-task D: Rename preprocessor.py → query.py and agent.py → generation.py**
+  - Rename `src/preprocessor.py` to `src/query.py` (update all internal references in `src/`)
+  - Rename `src/agent.py` to `src/generation.py` (update all internal references in `src/`)
+  - Update `src/main.py`, `src/pipeline.py` imports
+  - Update all test files to import from new names
+  - Tests: test_agent.py, test_pipeline.py, test_main.py, test_evals.py
+  - [ ] Task complete
+- **Sub-task E: Update imports across all tests and finalize**
+  - Remove `sys.path.insert(0, ...)` hacks from tests — project should be runnable with `python -m pytest` from root or `python -m src.main`
+  - Ensure all tests import from canonical domain paths (e.g. `from src.storage import ChunkStore`)
+  - Run full test suite, fix any import or API breakage
+  - Run `python -m src.main` to verify CLI still works
+  - Tests: All test files
+  - [ ] Task complete

@@ -109,3 +109,10 @@
 ## Environment Loading (Bootstrapping)
 - `src/main.py` now calls `load_dotenv()` at startup so `.env` values are loaded automatically
 - `python-dotenv` was added to `requirements.txt` because it was missing
+
+## Feature 18 — Sub-task A: Extract ChunkStore into src/storage.py
+- New module `src/storage.py` owns the `ChunkStore` class and its private helpers (`_encode_metadata`, `_row_to_chunk`, `_migrate_add_metadata_columns`)
+- `src/retrieval.py` now imports `ChunkStore` from `src.storage` (no functional changes to `DocumentRetriever`)
+- `tests/test_retrieval.py` imports `ChunkStore` from `src.storage` while keeping `DocumentRetriever` / `extract_chunk_metadata` from `src.retrieval`
+- `sqlite3` is still imported in `retrieval.py` because `clear_cache()` catches `sqlite3.ProgrammingError`
+- All 103 tests in the suite still pass; no regressions

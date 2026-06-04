@@ -9,7 +9,8 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from retrieval import ChunkStore, DocumentRetriever, extract_chunk_metadata
+from storage import ChunkStore
+from retrieval import DocumentRetriever, extract_chunk_metadata
 
 
 class TestChunkStore(unittest.TestCase):

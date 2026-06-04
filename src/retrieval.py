@@ -11,6 +11,7 @@ import faiss
 import numpy as np
 
 from src.preprocessor import extract_tags
+from src.storage import ChunkStore
 
 
 SUPPORTED_SUFFIXES = {".md", ".txt", ".pdf"}
@@ -38,9 +39,6 @@ def extract_chunk_metadata(text, file_name=""):
         "importance": float(importance),
         "file_name": file_name or "",
     }
-
-
-class ChunkStore:
     METADATA_COLUMNS = ("tags", "summary", "importance", "file_name")
 
     def __init__(self, db_path):
