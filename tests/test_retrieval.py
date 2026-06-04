@@ -10,7 +10,8 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from storage import ChunkStore
-from retrieval import DocumentRetriever, extract_chunk_metadata
+from retrieval import DocumentRetriever
+from ingestion import extract_chunk_metadata
 
 
 class TestChunkStore(unittest.TestCase):
@@ -217,7 +218,7 @@ class TestDocumentRetriever(unittest.TestCase):
         self.assertEqual(docs[0].metadata["file_name"], "test.txt")
 
     def test_load_documents_pdf(self):
-        with patch("retrieval.PDFReader") as MockReader:
+        with patch("src.ingestion.PDFReader") as MockReader:
             mock_reader = MockReader.return_value
             mock_reader.load_data.return_value = ["pdf-doc"]
             path = self.docs_dir / "file.pdf"
@@ -249,7 +250,7 @@ class TestDocumentRetriever(unittest.TestCase):
         node1 = self._make_fake_node("n1 text", "a.md")
         node2 = self._make_fake_node("n2 text", "a.md")
         mock_splitter.get_nodes_from_documents.return_value = [node1, node2]
-        with patch("retrieval.SentenceSplitter", return_value=mock_splitter):
+        with patch("src.ingestion.SentenceSplitter", return_value=mock_splitter):
             chunks = self.retriever.chunk_documents(["d1"])
             self.assertEqual(len(chunks), 2)
             self.assertEqual(chunks[0]["text"], "n1 text")
@@ -268,7 +269,7 @@ class TestDocumentRetriever(unittest.TestCase):
             "leave.md",
         )
         mock_splitter.get_nodes_from_documents.return_value = [node1]
-        with patch("retrieval.SentenceSplitter", return_value=mock_splitter):
+        with patch("src.ingestion.SentenceSplitter", return_value=mock_splitter):
             chunks = self.retriever.chunk_documents(["d1"])
         self.assertEqual(len(chunks), 1)
         meta = chunks[0]["metadata"]
@@ -335,7 +336,7 @@ class TestDocumentRetriever(unittest.TestCase):
 
         self.retriever.embed_model.get_text_embedding.side_effect = fake_embed
 
-        with patch("retrieval.SentenceSplitter") as MockSplitter:
+        with patch("src.ingestion.SentenceSplitter") as MockSplitter:
             splitter = MockSplitter.return_value
             splitter.get_nodes_from_documents.return_value = [
                 self._make_fake_node("alpha content", "a.md"),
@@ -362,7 +363,7 @@ class TestDocumentRetriever(unittest.TestCase):
 
         self.retriever.embed_model.get_text_embedding.side_effect = fake_embed
 
-        with patch("retrieval.SentenceSplitter") as MockSplitter:
+        with patch("src.ingestion.SentenceSplitter") as MockSplitter:
             splitter = MockSplitter.return_value
             splitter.get_nodes_from_documents.return_value = [
                 self._make_fake_node("alpha content", "a.md"),
@@ -395,7 +396,7 @@ class TestDocumentRetriever(unittest.TestCase):
 
         self.retriever.embed_model.get_text_embedding.side_effect = fake_embed
 
-        with patch("retrieval.SentenceSplitter") as MockSplitter:
+        with patch("src.ingestion.SentenceSplitter") as MockSplitter:
             splitter = MockSplitter.return_value
             splitter.get_nodes_from_documents.return_value = [
                 self._make_fake_node("alpha", "a.md"),
@@ -430,7 +431,7 @@ class TestDocumentRetriever(unittest.TestCase):
 
         self.retriever.embed_model.get_text_embedding.side_effect = fake_embed
 
-        with patch("retrieval.SentenceSplitter") as MockSplitter:
+        with patch("src.ingestion.SentenceSplitter") as MockSplitter:
             splitter = MockSplitter.return_value
             splitter.get_nodes_from_documents.return_value = [
                 self._make_fake_node("alpha", "a.md")
@@ -462,7 +463,7 @@ class TestDocumentRetriever(unittest.TestCase):
             return [float(len(text)), 1.0]
 
         self.retriever.embed_model.get_text_embedding.side_effect = fake_embed
-        with patch("retrieval.SentenceSplitter") as MockSplitter:
+        with patch("src.ingestion.SentenceSplitter") as MockSplitter:
             splitter = MockSplitter.return_value
             splitter.get_nodes_from_documents.return_value = [
                 self._make_fake_node("alpha", "a.md")
@@ -483,7 +484,7 @@ class TestDocumentRetriever(unittest.TestCase):
         second.index = None
         second.chunk_store = None
         second.state = {}
-        with patch("retrieval.SentenceSplitter") as MockSplitter2:
+        with patch("src.ingestion.SentenceSplitter") as MockSplitter2:
             splitter2 = MockSplitter2.return_value
             splitter2.get_nodes_from_documents.return_value = [
                 self._make_fake_node("alpha", "a.md")
@@ -500,7 +501,7 @@ class TestDocumentRetriever(unittest.TestCase):
             return [float(len(text)), 1.0]
 
         self.retriever.embed_model.get_text_embedding.side_effect = fake_embed
-        with patch("retrieval.SentenceSplitter") as MockSplitter:
+        with patch("src.ingestion.SentenceSplitter") as MockSplitter:
             splitter = MockSplitter.return_value
             splitter.get_nodes_from_documents.return_value = [
                 self._make_fake_node("alpha", "a.md")

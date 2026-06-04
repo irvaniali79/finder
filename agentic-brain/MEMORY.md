@@ -116,3 +116,10 @@
 - `tests/test_retrieval.py` imports `ChunkStore` from `src.storage` while keeping `DocumentRetriever` / `extract_chunk_metadata` from `src.retrieval`
 - `sqlite3` is still imported in `retrieval.py` because `clear_cache()` catches `sqlite3.ProgrammingError`
 - All 103 tests in the suite still pass; no regressions
+
+## Feature 18 — Sub-task B: Extract Ingestion into src/ingestion.py
+- New module `src/ingestion.py` owns the file → chunk pipeline: `SUPPORTED_SUFFIXES`, `extract_chunk_metadata`, `compute_file_fingerprint`, `list_supported_files`, `read_file_as_documents`, `load_documents`, `chunk_documents` (all standalone, no `self`)
+- `src/retrieval.py` keeps thin wrapper methods on `DocumentRetriever` (`load_documents`, `chunk_documents`, `compute_file_fingerprint`, `_list_supported_files`, `_read_file_as_documents`) that delegate to `src.ingestion` for backward compat with existing tests and the `_build_full_index`/`_append_chunks_for_files` internals
+- `tests/test_retrieval.py` imports `extract_chunk_metadata` from `src.ingestion` and now patches `src.ingestion.SentenceSplitter` and `src.ingestion.PDFReader` (not `retrieval.*`) because `retrieval.py` resolves the symbols through `src.ingestion`; patching the wrong module is silently a no-op since the test bootstrap (`sys.path.insert(0, 'src')`) creates a separate top-level `ingestion` module
+- All 103 tests still pass; CLI (`python -m src.main`) still loads and reads from `.cache/`
+- No functional change to the public API; this is purely a domain split

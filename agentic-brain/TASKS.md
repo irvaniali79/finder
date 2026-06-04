@@ -152,7 +152,7 @@
   - Update `retrieval.py` to import from `src.ingestion`
   - Update tests to import from `src.ingestion`
   - Tests: test_retrieval.py (TestExtractChunkMetadata, relevant TestDocumentRetriever methods)
-  - [ ] Task complete
+  - [x] Task complete
 - **Sub-task C: Extract Reranking + Filtering into src/reranking.py**
   - Move `_query_word_set()`, `_summary_match_count()`, `_filter_by_tags()` (as standalone function), `_boost_by_summary()` (as standalone function), `Pipeline.rerank()` (as standalone `rerank()` function) from `pipeline.py` into new `src/reranking.py`
   - `Pipeline.retrieve()` and `Pipeline.retrieve_top_k()` stay in `pipeline.py` but delegate to `src.reranking`

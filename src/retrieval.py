@@ -1,44 +1,19 @@
-import hashlib
 import json
-import re
 import sqlite3
 from pathlib import Path
-from llama_index.core import Document
-from llama_index.core.text_splitter import SentenceSplitter
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.readers.file import PDFReader
 import faiss
 import numpy as np
 
-from src.preprocessor import extract_tags
+from src.ingestion import (
+    SUPPORTED_SUFFIXES,
+    chunk_documents as _chunk_documents,
+    compute_file_fingerprint as _compute_file_fingerprint,
+    list_supported_files as _list_supported_files,
+    load_documents as _load_documents,
+    read_file_as_documents as _read_file_as_documents,
+)
 from src.storage import ChunkStore
-
-
-SUPPORTED_SUFFIXES = {".md", ".txt", ".pdf"}
-
-
-_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
-_TAG_WEIGHT = 0.5
-_LENGTH_WEIGHT = 0.5
-_MAX_IMPORTANCE = 1.0
-
-
-def extract_chunk_metadata(text, file_name=""):
-    if not text:
-        return {"tags": [], "summary": "", "importance": 0.0, "file_name": file_name or ""}
-    tags = extract_tags(text)
-    first_sentence = _SENTENCE_SPLIT_RE.split(text.strip(), maxsplit=1)[0].strip()
-    summary = first_sentence[:200]
-    word_count = len(re.findall(r"\b\w+\b", text))
-    length_score = min(1.0, word_count / 100.0)
-    tag_score = min(1.0, len(tags) / 5.0)
-    importance = min(_MAX_IMPORTANCE, _LENGTH_WEIGHT * length_score + _TAG_WEIGHT * tag_score)
-    return {
-        "tags": tags,
-        "summary": summary,
-        "importance": float(importance),
-        "file_name": file_name or "",
-    }
 
 
 class DocumentRetriever:
@@ -74,38 +49,16 @@ class DocumentRetriever:
 
     @staticmethod
     def compute_file_fingerprint(path):
-        stat = path.stat()
-        h = hashlib.sha256()
-        h.update(str(stat.st_size).encode("utf-8"))
-        h.update(str(int(stat.st_mtime_ns)).encode("utf-8"))
-        h.update(path.read_bytes())
-        return h.hexdigest()
+        return _compute_file_fingerprint(path)
 
     def _list_supported_files(self):
-        if not self.docs_path.exists():
-            return []
-        files = []
-        for path in sorted(self.docs_path.iterdir()):
-            if not path.is_file():
-                continue
-            if path.suffix.lower() in SUPPORTED_SUFFIXES:
-                files.append(path)
-        return files
+        return _list_supported_files(self.docs_path)
 
     def _read_file_as_documents(self, path):
-        suffix = path.suffix.lower()
-        if suffix in {".md", ".txt"}:
-            text = path.read_text(encoding="utf-8")
-            return [Document(text=text, metadata={"file_name": path.name})]
-        if suffix == ".pdf":
-            return list(PDFReader().load_data(path))
-        return []
+        return _read_file_as_documents(path)
 
     def load_documents(self):
-        documents = []
-        for path in self._list_supported_files():
-            documents.extend(self._read_file_as_documents(path))
-        return documents
+        return _load_documents(self.docs_path)
 
     def _load_state(self):
         path = self._state_path()
@@ -162,18 +115,7 @@ class DocumentRetriever:
             legacy_pkl.unlink()
 
     def chunk_documents(self, documents):
-        if not documents:
-            return []
-        splitter = SentenceSplitter(chunk_size=512, chunk_overlap=50)
-        nodes = splitter.get_nodes_from_documents(documents)
-        chunk_dicts = []
-        for node in nodes:
-            metadata = dict(node.metadata) if node.metadata else {}
-            file_name = metadata.get("file_name", "")
-            extracted = extract_chunk_metadata(node.text, file_name)
-            merged = {**metadata, **extracted}
-            chunk_dicts.append({"text": node.text, "metadata": merged})
-        return chunk_dicts
+        return _chunk_documents(documents)
 
     def create_embeddings(self, chunks):
         embeddings = [self.embed_model.get_text_embedding(c["text"]) for c in chunks]
