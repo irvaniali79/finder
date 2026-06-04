@@ -47,11 +47,30 @@
 - Legacy `chunks.pkl` is removed by `clear_cache()` for hygiene
 - Trade-off: changed files still append to the index (no in-place update); repeated edits to the same file will accumulate chunk versions. For an MVP this is acceptable, and `clear_cache()` is the supported way to compact
 
+## Pipeline Variants Harness (Feature 10)
+- New `src/pipeline.py` with a `Pipeline` class and a `VARIANT_FEATURES` registry matching DESIGN.md's V0–V5
+- V0 = pure vector search (delegates to `DocumentRetriever.retrieve`)
+- V1–V5 raise `NotImplementedError` and point to the feature that fills them in (F11, F12, F13) — this is the ablation harness only
+- `build_pipeline(variant, ...)` is a convenience factory that creates the retriever and runs `setup()`
+- Variants are monotonic: V(n+1).features ⊇ V(n).features (enforced by test)
+- 11 unit tests in `tests/test_pipeline.py` cover the registry, monotonicity, defaults, and V0 delegation
+
+## Query Preprocessing (Feature 11)
+- New `src/preprocessor.py` with `extract_tags()`, `expand_query()`, `detect_question_intent()`, `combine_query_embeddings()`
+- `extract_tags()` is a stopword-based keyword extractor (handles hyphens, underscores, lowercasing)
+- `expand_query()` returns up to 3 variants: original, keywords-only, and `<intent> <keywords>` (e.g. `what is vacation policy`)
+- `combine_query_embeddings()` takes the centroid of the variant embeddings for FAISS search
+- `Pipeline` now has `_build_query_embedding()` that switches between single-embedding and centroid-of-variants based on the `query_expansion` feature flag
+- V3 still raises `NotImplementedError` because its other features (`tag_filtering`, `summary_embedding`) are F13; the expansion logic is exercised via direct pipeline tests
+- Trade-off: keyword extraction is heuristic (no LLM call). The DESIGN.md says "using small local LLM" but for the MVP this keeps preprocessing deterministic and free; an LLM-based extractor can be added later behind the same `extract_tags` signature
+
 ## Pending Improvements
 - Need to add proper error handling for edge cases
 - Should add validation for empty queries
 - Could improve chunking strategy based on document structure
 - Consider purging old chunk versions for a file when it changes (or rebuilding the index)
+- Wire RAGAS/DeepEval ablation runner once F13 lands
+- Optional: replace stopword tag extractor with an LLM-based tagger when not on a tight budget
 
 ## Environment Loading (Bootstrapping)
 - `src/main.py` now calls `load_dotenv()` at startup so `.env` values are loaded automatically
