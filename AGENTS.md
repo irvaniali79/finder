@@ -40,7 +40,7 @@ Every task must be written as a feature-level deliverable with the following fie
 - **Single-task focus**: Work on ONLY ONE unchecked task at a time.
 - **Dependency check**: Before starting a task, verify all its dependencies are marked `[x]`. If not, **halt** and tell the user which tasks must be completed first.
 - **Completion steps**:
-  0. read `GITWORKFLOW.md`
+  0. read `agentic-brain/GITWORKFLOW.md`
   1. Write the code and the required tests for that feature.
   2. Run the tests. If any fail, follow the **Debug & Test Integrity Rule** (see below).
   3. Mark the task as `[x]` in `agentic-brain/TASKS.md` only when **all its tests pass**.
