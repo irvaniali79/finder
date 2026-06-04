@@ -4,7 +4,7 @@
 Mini Company Knowledge Bot - a RAG-based CLI Q&A system backed by the docs/ knowledge base.
 
 ## Current State
-- Retrieval core is functional: `src/retrieval.py`, `src/agent.py`, `src/main.py`, `src/pipeline.py`, `src/preprocessor.py`, `src/storage.py`, `src/ingestion.py`
+- Retrieval core is functional: `src/retrieval.py`, `src/agent.py`, `src/main.py`, `src/pipeline.py`, `src/preprocessor.py`, `src/storage.py`, `src/ingestion.py`, `src/reranking.py`
 - Document ingestion flow supports `.txt`, `.md`, and `.pdf` files directly under `docs/`
 - OpenRouter is used as the LLM provider instead of Ollama
 - Ingestion is incremental: `DocumentRetriever.setup()` fingerprints each file in `docs/`, persists the FAISS index, chunks, and per-file state to `.cache/`, and only re-processes files that are new or changed on subsequent runs
@@ -20,11 +20,9 @@ Mini Company Knowledge Bot - a RAG-based CLI Q&A system backed by the docs/ know
 - `DocumentRetriever.retrieve()`, `Pipeline.retrieve()`, and `Pipeline.retrieve_top_k()` return 3-tuples: `(text, distance, metadata)`, which preserves ingestion-time metadata (`file_name`, `summary`, `tags`, `importance`) and propagates it all the way to `QAAgent` for prompt formatting in production.
 - Query preprocessing (`src/preprocessor.py`) provides `extract_tags`, `expand_query` (≤3 variants), `detect_question_intent`, and `combine_query_embeddings`
 - `.cache/` is git-ignored; use `DocumentRetriever.clear_cache()` to force a full rebuild
-- Test coverage in `tests/test_retrieval.py`, `tests/test_agent.py`, `tests/test_main.py`, `tests/test_evals.py`, `tests/test_pipeline.py` (103 tests passing)
+- Test coverage in `tests/test_retrieval.py`, `tests/test_agent.py`, `tests/test_main.py`, `tests/test_evals.py`, `tests/test_pipeline.py`, `tests/test_reranking.py` (121 tests passing)
 
 ## Pending Integration Tasks
-- **Feature 18 Sub-task C**: Extract Reranking + Filtering into `src/reranking.py` — move `_query_word_set`, `_summary_match_count`, `_filter_by_tags`, `_boost_by_summary`, and `Pipeline.rerank` from `pipeline.py`.
-- **Feature 18 Sub-task C**: Extract Reranking + Filtering into `src/reranking.py` — move `_query_word_set`, `_summary_match_count`, `_filter_by_tags`, `_boost_by_summary`, and `Pipeline.rerank` from `pipeline.py`.
 - **Feature 18 Sub-task D**: Rename `src/preprocessor.py` → `src/query.py` and `src/agent.py` → `src/generation.py`, updating all imports.
 - **Feature 18 Sub-task E**: Remove `sys.path.insert(0, ...)` hacks from tests; ensure all tests import from canonical domain paths; run full test suite and verify CLI still works.
 
