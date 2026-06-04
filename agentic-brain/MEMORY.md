@@ -76,7 +76,21 @@
 - All 83 tests in the suite pass
 - Trade-off: rerank is heuristic (no cross-encoder, no LLM judge). It's cheap, deterministic, and gives us a working ablation hook. A real cross-encoder can be dropped in behind the same `rerank` signature later
 
-## Pending Improvements
+## Per-Chunk Metadata Extraction (Feature 13)
+- Added `extract_chunk_metadata(text, file_name)` in `src/retrieval.py` that extracts:
+  - `tags`: reuses stopword-based keyword extraction from preprocessor
+  - `summary`: first sentence (up to 200 chars) of chunk text
+  - `importance`: heuristic combining word count and tag count (clamped to [0, 1])
+- Extended `ChunkStore` schema with `tags` (TEXT JSON), `summary` (TEXT), `importance` (REAL). Migration via `ALTER TABLE` ensures backward compatibility with existing DBs.
+- Updated `ChunkStore.add()` to accept and persist these new metadata fields; `get()`/`get_many()` return them.
+- Modified `chunk_documents()` and `_append_chunks_for_files()` to call `extract_chunk_metadata` and merge into chunk metadata.
+- Updated `src/agent.py`'s `generate_prompt()` to accept optional 3-tuple `(text, distance, metadata)` and render file_name + summary into the prompt when present.
+- Implemented V1/V2/V3 in `src/pipeline.py`:
+  - V1: `_filter_by_tags` drops candidates with zero tag overlap when `tag_filtering` active
+  - V2: `_boost_by_summary` subtracts a small distance boost when summary matches query terms
+  - V3: V2 + query expansion (already implemented in F11)
+- V4/V5 now consume importance scores from the metadata for the rerank weighting.
+- Trade-off: metadata extraction uses deterministic heuristics (no LLM). Matches the F11 choice to keep preprocessing free and deterministic. LLM-based tag extraction/summarization can be added later behind the same function signatures.
 - Need to add proper error handling for edge cases
 - Should add validation for empty queries
 - Could improve chunking strategy based on document structure

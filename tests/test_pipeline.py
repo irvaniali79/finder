@@ -147,11 +147,23 @@ class TestPipelineQueryExpansion(unittest.TestCase):
         self.assertEqual(retriever.embed_model.get_text_embedding.call_count, 1)
         self.assertEqual(emb.dtype, np.float32)
 
-    def test_v3_still_blocked_until_f13(self):
+    def test_v3_runs_end_to_end(self):
         retriever = self._make_retriever()
-        p = Pipeline(retriever, variant="V3")
-        with self.assertRaises(NotImplementedError):
-            p.retrieve("query")
+        retriever.index.search.return_value = (
+            np.array([[0.1, 0.2, 0.3]]),
+            np.array([[0, 1, 2]]),
+        )
+        retriever.chunk_store.get_many.side_effect = lambda ids: [
+            {"text": f"chunk {i}", "file_name": f"f{i}.md",
+             "tags": ["leave"], "summary": f"summary {i}",
+             "importance": 0.5} for i in ids
+        ]
+        p = Pipeline(retriever, variant="V3", top_k=3)
+        results = p.retrieve("What is the leave policy?")
+        self.assertEqual(len(results), 3)
+        for text, dist in results:
+            self.assertIsInstance(text, str)
+            self.assertIsInstance(dist, float)
 
     def test_v4_runs_rerank_stage(self):
         retriever = self._make_retriever()
@@ -263,6 +275,38 @@ class TestRetrieveTopN(unittest.TestCase):
         candidates = p.retrieve_top_n("query", n=3)
         self.assertEqual(len(candidates), 2)
 
+    def test_candidate_includes_metadata_fields(self):
+        retriever = MagicMock()
+        retriever.embed_model = MagicMock()
+        retriever.embed_model.get_text_embedding.return_value = [0.0, 0.0]
+        retriever.index = MagicMock()
+        retriever.index.search.return_value = (
+            np.array([[0.1, 0.2]], dtype="float32"),
+            np.array([[0, 1]], dtype="int64"),
+        )
+        store = MagicMock()
+        store.count.return_value = 2
+        store.get_many.side_effect = lambda ids: [
+            {
+                "text": f"chunk {i}",
+                "file_name": f"f{i}.md",
+                "tags": ["leave", "policy"],
+                "summary": f"summary {i}",
+                "importance": 0.7,
+            }
+            for i in ids
+        ]
+        retriever.chunk_store = store
+        p = Pipeline(retriever, variant="V0")
+        candidates = p.retrieve_top_n("query", n=2)
+        self.assertEqual(len(candidates), 2)
+        for c in candidates:
+            self.assertIn("tags", c)
+            self.assertIn("summary", c)
+            self.assertIn("importance", c)
+        self.assertEqual(candidates[0]["tags"], ["leave", "policy"])
+        self.assertEqual(candidates[0]["importance"], 0.7)
+
 
 class TestRerank(unittest.TestCase):
     def _make_candidates(self):
@@ -364,6 +408,86 @@ class TestRetrieveTopK(unittest.TestCase):
         results = p.retrieve_top_k("query", k=2)
         for item in results:
             self.assertEqual(len(item), 2)
+
+
+class TestMetadataVariants(unittest.TestCase):
+    def _make_retriever(self, chunks):
+        retriever = MagicMock()
+        retriever.embed_model = MagicMock()
+        retriever.embed_model.get_text_embedding.return_value = [0.0, 0.0]
+        retriever.index = MagicMock()
+        store = MagicMock()
+        store.count.return_value = len(chunks)
+        store.get_many.side_effect = lambda ids: [chunks[i] for i in ids]
+        retriever.chunk_store = store
+        ids = list(range(len(chunks)))
+        retriever.index.search.return_value = (
+            np.array([[0.1 * (i + 1) for i in ids]], dtype="float32"),
+            np.array([ids], dtype="int64"),
+        )
+        return retriever
+
+    def test_v1_filters_chunks_with_no_tag_overlap(self):
+        chunks = [
+            {"text": "vacation policy info", "file_name": "leave.md",
+             "tags": ["vacation", "policy"], "summary": "vacation summary",
+             "importance": 0.5},
+            {"text": "product pricing info", "file_name": "guide.md",
+             "tags": ["pricing", "product"], "summary": "pricing summary",
+             "importance": 0.5},
+        ]
+        retriever = self._make_retriever(chunks)
+        p = Pipeline(retriever, variant="V1", top_k=5)
+        results = p.retrieve("vacation days")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0][0], "vacation policy info")
+
+    def test_v1_keeps_all_when_no_query_tags(self):
+        chunks = [
+            {"text": "alpha", "file_name": "a.md", "tags": [],
+             "summary": "", "importance": 0.5},
+            {"text": "beta", "file_name": "b.md", "tags": [],
+             "summary": "", "importance": 0.5},
+        ]
+        retriever = self._make_retriever(chunks)
+        p = Pipeline(retriever, variant="V1", top_k=5)
+        results = p.retrieve("a is the")
+        self.assertEqual(len(results), 2)
+
+    def test_v2_summary_boost_reduces_distance(self):
+        chunks = [
+            {"text": "alpha", "file_name": "a.md",
+             "tags": ["vacation", "policy"],
+             "summary": "vacation policy summary", "importance": 0.5},
+            {"text": "beta", "file_name": "b.md",
+             "tags": ["vacation", "policy"],
+             "summary": "completely unrelated topic", "importance": 0.5},
+        ]
+        retriever = self._make_retriever(chunks)
+        p = Pipeline(retriever, variant="V2", top_k=5)
+        results = p.retrieve("vacation policy")
+        self.assertEqual(len(results), 2)
+        texts = [r[0] for r in results]
+        self.assertEqual(texts[0], "alpha")
+
+    def test_v3_combines_tag_filter_and_summary_boost(self):
+        chunks = [
+            {"text": "vacation policy info", "file_name": "leave.md",
+             "tags": ["vacation", "policy"], "summary": "vacation policy details",
+             "importance": 0.5},
+            {"text": "vacation pricing", "file_name": "guide.md",
+             "tags": ["vacation", "pricing"], "summary": "pricing info",
+             "importance": 0.5},
+            {"text": "product info", "file_name": "product.md",
+             "tags": ["product"], "summary": "product summary",
+             "importance": 0.5},
+        ]
+        retriever = self._make_retriever(chunks)
+        p = Pipeline(retriever, variant="V3", top_k=5)
+        results = p.retrieve("vacation policy")
+        texts = [r[0] for r in results]
+        self.assertNotIn("product info", texts)
+        self.assertEqual(texts[0], "vacation policy info")
 
 
 if __name__ == "__main__":

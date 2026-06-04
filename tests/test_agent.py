@@ -75,6 +75,45 @@ class TestQAAgent(unittest.TestCase):
         self.assertEqual(agent.model_name, "openrouter/free")
         self.assertEqual(agent.api_base, "https://openrouter.ai/api/v1/chat/completions")
 
+    def test_generate_prompt_accepts_legacy_two_tuples(self):
+        chunks = [("answer text", 0.1)]
+        prompt = self.agent.generate_prompt("q", chunks)
+        self.assertIn("answer text", prompt)
+        self.assertNotIn("[source:", prompt)
+
+    def test_generate_prompt_includes_file_name_and_summary(self):
+        chunks = [(
+            "Full text of the chunk.",
+            0.1,
+            {
+                "file_name": "leave.md",
+                "summary": "Short summary.",
+                "tags": ["vacation"],
+                "importance": 0.5,
+            },
+        )]
+        prompt = self.agent.generate_prompt("vacation days?", chunks)
+        self.assertIn("[source: leave.md]", prompt)
+        self.assertIn("summary: Short summary.", prompt)
+        self.assertIn("Full text of the chunk.", prompt)
+
+    def test_generate_prompt_omits_summary_when_equal_to_text(self):
+        chunks = [(
+            "Identical text.",
+            0.1,
+            {"file_name": "f.md", "summary": "Identical text.", "tags": []},
+        )]
+        prompt = self.agent.generate_prompt("q", chunks)
+        self.assertNotIn("summary:", prompt)
+        self.assertIn("[source: f.md]", prompt)
+
+    def test_generate_prompt_handles_missing_metadata_keys(self):
+        chunks = [("text only", 0.1, {})]
+        prompt = self.agent.generate_prompt("q", chunks)
+        self.assertIn("text only", prompt)
+        self.assertNotIn("[source:", prompt)
+        self.assertNotIn("summary:", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()
