@@ -1,4 +1,6 @@
 import sys
+from dotenv import load_dotenv
+load_dotenv()
 from src.retrieval import DocumentRetriever
 from src.agent import QAAgent
 

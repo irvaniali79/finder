@@ -43,8 +43,22 @@
  - [x] Task complete
 
 ## Feature 7: Configurable OpenRouter Endpoint via Environment Variables
- - **Dependencies**: Feature 3
- - **Affected files**: src/agent.py, tests/test_agent.py, README.md
- - **Key functions**: QAAgent.__init__()
- - **Tests**: tests/test_agent.py
- - [x] Task complete
+- **Dependencies**: Feature 3
+- **Affected files**: src/agent.py, tests/test_agent.py, README.md
+- **Key functions**: QAAgent.__init__()
+- **Tests**: tests/test_agent.py
+- [x] Task complete
+
+## Feature 8: Incremental Document Ingestion with Persistent Index
+- **Dependencies**: Feature 1, Feature 2
+- **Affected files**: src/retrieval.py, tests/test_retrieval.py, agentic-brain/MEMORY.md, agentic-brain/AGENT_CONTEXT.md
+- **Key functions**: load_documents(), setup(), compute_file_fingerprint(), _save_state(), _load_state(), clear_cache()
+- **Tests**: tests/test_retrieval.py
+- [x] Task complete
+
+## Feature 9: Disk-Backed Chunk Store for Large Documents
+- **Dependencies**: Feature 8
+- **Affected files**: src/retrieval.py, tests/test_retrieval.py, agentic-brain/MEMORY.md, agentic-brain/AGENT_CONTEXT.md
+- **Key functions**: ChunkStore.__init__(), ChunkStore.add(), ChunkStore.get(), ChunkStore.get_many(), DocumentRetriever.setup(), DocumentRetriever.retrieve()
+- **Tests**: tests/test_retrieval.py
+- [x] Task complete
