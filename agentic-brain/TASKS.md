@@ -42,7 +42,7 @@
  - **Tests**: tests/test_retrieval.py
  - [x] Task complete
 
-## Feature 7: Configurable Ollama Endpoint via Environment Variables
+## Feature 7: Configurable OpenRouter Endpoint via Environment Variables
  - **Dependencies**: Feature 3
  - **Affected files**: src/agent.py, tests/test_agent.py, README.md
  - **Key functions**: QAAgent.__init__()

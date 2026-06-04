@@ -21,10 +21,13 @@
 - Switched to file-by-file ingestion under docs/ using LlamaIndex TxtReader and PDFReader
 - This expands the knowledge source without changing chunking, embedding, or retrieval behavior
 
-## OpenRouter Endpoint Configurability
-- Added `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and `OPENROUTER_API_BASE` environment variables so the agent can target different OpenRouter endpoints/models
-- Constructor args take precedence over env vars; env vars override defaults
-- Tested with unit tests for: defaults, env var overrides, constructor arg precedence
+## OpenRouter Migration
+- Migrated from Ollama to OpenRouter API for LLM capabilities
+- Ollama-related dependencies removed from requirements.txt
+- Default model changed from `llama3.2` to `openrouter/free`
+- Environment variables updated to `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and `OPENROUTER_API_BASE`
+- Constructor args in `QAAgent` maintain precedence over env vars; env vars override hardcoded defaults
+- This change simplifies deployment by removing the local Ollama dependency requirement
 
 ## Pending Improvements
 - Need to add proper error handling for edge cases

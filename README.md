@@ -8,29 +8,24 @@ A RAG-based Q&A system using company documents.
 pip install -r requirements.txt
 ```
 
-Ensure Ollama is installed and running:
-```bash
-ollama pull llama3.2
-ollama serve
-```
+**Required environment variables:**
+- `OPENROUTER_API_KEY` — your OpenRouter API key (required)
 
-**Environment variables** (optional):
-- `OLLAMA_BASE_URL` — Ollama server URL (default: `http://localhost:11434`)
-- `OLLAMA_MODEL` — Model name (default: `llama3.2`)
-
-These can be set to point at a third-party Ollama-compatible endpoint.
+**Optional environment variables:**
+- `OPENROUTER_MODEL` — model name (default: `openrouter/free`)
+- `OPENROUTER_API_BASE` — API base URL (default: `https://openrouter.ai/api/v1/chat/completions`)
 
 ## Run
 
 ```bash
-./.venv/bin/python src/main.py
+python src/main.py
 ```
 
 ## Architecture
 
 - **Document Ingestion**: LlamaIndex SimpleDirectoryReader + SentenceSplitter
 - **Vector Storage**: FAISS (IndexFlatL2)
-- **LLM**: Ollama (llama3.2)
+- **LLM**: OpenRouter API
 - **Embeddings**: HuggingFace (all-MiniLM-L6-v2)
 
 ## Documents
