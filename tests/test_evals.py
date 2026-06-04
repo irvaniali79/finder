@@ -43,16 +43,14 @@ class TestDocumentRetrieverEval(TestEvalSuite):
     def _create_mock_retriever(self, doc_texts):
         retriever = DocumentRetriever.__new__(DocumentRetriever)
         retriever.docs_path = "tests/fixtures"
+        retriever.cache_dir = MagicMock()
         retriever.embed_model = MagicMock()
         retriever.index = MagicMock()
-        
-        mock_nodes = []
-        for i, text in enumerate(doc_texts):
-            node = MagicMock()
-            node.text = text
-            mock_nodes.append(node)
-        
-        retriever.chunks = mock_nodes
+
+        retriever.chunks = [
+            {"text": text, "metadata": {"file_name": f"doc_{i}.md"}}
+            for i, text in enumerate(doc_texts)
+        ]
         return retriever
 
     def test_retriever_returns_eval_evidence(self):
@@ -82,11 +80,21 @@ class TestDocumentRetrieverEval(TestEvalSuite):
     def test_retriever_setup_pipeline(self):
         retriever = DocumentRetriever.__new__(DocumentRetriever)
         retriever.docs_path = "tests/fixtures"
+        retriever.cache_dir = MagicMock()
         retriever.embed_model = MagicMock()
         retriever.chunks = []
+        retriever.state = {}
 
-        with patch.object(retriever, "load_documents", return_value=["d1"]) as load_mock, \
-             patch.object(retriever, "chunk_documents", return_value=[MagicMock(text="n1")]) as chunk_mock, \
+        with patch.object(retriever, "_list_supported_files", return_value=[], ), \
+             patch.object(retriever, "_load_state"), \
+             patch.object(retriever, "_restore_index", return_value=False), \
+             patch.object(retriever, "_save_state"), \
+             patch.object(retriever, "_persist_index"), \
+             patch.object(retriever, "load_documents", return_value=["d1"]) as load_mock, \
+             patch.object(retriever, "chunk_documents", return_value=[
+                 {"text": "n1", "metadata": {"file_name": "a.md"}},
+                 {"text": "n2", "metadata": {"file_name": "a.md"}},
+             ]) as chunk_mock, \
              patch.object(retriever, "create_embeddings", return_value=np.array([[0.5, 0.5], [0.6, 0.6]], dtype="float32")) as emb_mock:
             retriever.setup()
             load_mock.assert_called_once()

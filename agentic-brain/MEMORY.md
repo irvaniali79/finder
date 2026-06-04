@@ -29,6 +29,15 @@
 - Constructor args in `QAAgent` maintain precedence over env vars; env vars override hardcoded defaults
 - This change simplifies deployment by removing the local Ollama dependency requirement
 
+## Incremental Ingestion (Feature 8)
+- Added per-file fingerprinting (SHA-256 of size + mtime_ns + bytes) to detect new/changed files
+- Persisted state, FAISS index, and chunks to `.cache/` (ignored by git)
+- `setup()` now does incremental loading: restores the index from cache, then chunks + embeds + appends only files whose fingerprint has changed or that are new
+- When a previously known file is no longer present, the index is rebuilt from scratch (safe fallback for deletions)
+- `chunks` is now a list of `{"text", "metadata"}` dicts instead of raw LlamaIndex nodes, so it is safely picklable
+- `clear_cache()` was added to wipe the persisted state, index, and chunks when a full rebuild is required
+- The CLI was not changed; the new caching kicks in automatically on every `setup()` call
+
 ## Pending Improvements
 - Need to add proper error handling for edge cases
 - Should add validation for empty queries
