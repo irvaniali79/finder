@@ -1,32 +1,79 @@
 # Agent Context
 
 ## Project Overview
-Mini Company Knowledge Bot - a RAG-based CLI Q&A system backed by the docs/ knowledge base.
+Mini Company Knowledge Bot — a RAG-based CLI Q&A system backed by the
+`docs/` knowledge base. Includes a V0–V5 ablation harness for measuring
+the contribution of each retrieval feature in isolation.
 
 ## Current State
-- Retrieval core is functional: `src/retrieval.py`, `src/agent.py`, `src/main.py`, `src/pipeline.py`, `src/preprocessor.py`, `src/storage.py`, `src/ingestion.py`, `src/reranking.py`
-- Document ingestion flow supports `.txt`, `.md`, and `.pdf` files directly under `docs/`
-- OpenRouter is used as the LLM provider instead of Ollama
-- Ingestion is incremental: `DocumentRetriever.setup()` fingerprints each file in `docs/`, persists the FAISS index, chunks, and per-file state to `.cache/`, and only re-processes files that are new or changed on subsequent runs
-- Chunk text is stored in a SQLite DB (`.cache/chunks.db`) via the `ChunkStore` class in `src/storage.py`; each chunk now has `tags`, `summary`, `importance` metadata extracted at ingestion time
-- `Pipeline` variants V0–V5 now run end-to-end:
-  - V0: pure vector search
-  - V1: vector search + tag filtering (drops candidates with zero tag overlap)
-  - V2: V1 + summary-match boost (reduces distance when summary contains query words)
-  - V3: V2 + query expansion (centroid of 2-3 variants)
-  - V4: V3 + two-stage rerank (similarity + importance + diversity penalty)
-  - V5: V4 + per-chunk importance weighting from metadata
-- `Pipeline.retrieve_top_n`, `Pipeline.rerank`, and `Pipeline.retrieve_top_k` provide the two-stage retrieval path
-- `DocumentRetriever.retrieve()`, `Pipeline.retrieve()`, and `Pipeline.retrieve_top_k()` return 3-tuples: `(text, distance, metadata)`, which preserves ingestion-time metadata (`file_name`, `summary`, `tags`, `importance`) and propagates it all the way to `QAAgent` for prompt formatting in production.
-- Query preprocessing (`src/preprocessor.py`) provides `extract_tags`, `expand_query` (≤3 variants), `detect_question_intent`, and `combine_query_embeddings`
-- `.cache/` is git-ignored; use `DocumentRetriever.clear_cache()` to force a full rebuild
-- Test coverage in `tests/test_retrieval.py`, `tests/test_agent.py`, `tests/test_main.py`, `tests/test_evals.py`, `tests/test_pipeline.py`, `tests/test_reranking.py` (121 tests passing)
+- **Ingestion** (`src/ingestion.py`): file loading, `SentenceSplitter`
+  chunking, per-chunk metadata extraction (`tags`, `summary`,
+  `importance`, `file_name`), SHA-256 content fingerprinting
+- **Storage** (`src/storage.py`): `ChunkStore` (SQLite at
+  `.cache/chunks.db`) with a `tags` / `summary` / `importance` schema
+  and an idempotent `ALTER TABLE` migration
+- **Retrieval** (`src/retrieval.py`): `DocumentRetriever` orchestrates
+  ingestion, FAISS index persistence (`.cache/faiss.index`), ingestion
+  state (`.cache/ingestion_state.json`), and search. `setup()` is
+  incremental — it fingerprints each file under `docs/`, restores the
+  index from cache, and only re-processes files that are new or
+  changed
+- **Query Preprocessing** (`src/preprocessor.py`): `extract_tags`,
+  `expand_query` (≤ 3 variants), `detect_question_intent`,
+  `combine_query_embeddings`
+- **Re-ranking & Filtering** (`src/reranking.py`): `query_word_set`,
+  `summary_match_count`, `filter_by_tags`, `boost_by_summary`,
+  `rerank` (similarity + importance + per-file diversity penalty)
+- **Pipeline** (`src/pipeline.py`): `Pipeline` + `VARIANT_FEATURES`
+  registry + `build_pipeline()` factory. Variants are monotonic
+  (V(n+1).features ⊇ V(n).features). `Pipeline.retrieve()` returns
+  3-tuples `(text, distance, metadata)`. `Pipeline.retrieve_top_n`,
+  `rerank`, and `retrieve_top_k` provide the two-stage retrieval
+  path
+- **Generation** (`src/agent.py`): `QAAgent` builds the prompt (with
+  source + summary headers) and calls the OpenRouter API with
+  exponential-backoff retry
+- **CLI** (`src/main.py`): interactive loop using `build_pipeline("V5")`
+  + `QAAgent`
+- `.cache/` is git-ignored; use `DocumentRetriever.clear_cache()` (or
+  delete `.cache/`) to force a full rebuild
+- 121 tests passing across `tests/test_retrieval.py`,
+  `test_ingestion.py`, `test_agent.py`, `test_main.py`,
+  `test_pipeline.py`, `test_reranking.py`, `test_evals.py`
 
-## Pending Integration Tasks
-- **Feature 18 Sub-task D**: Rename `src/preprocessor.py` → `src/query.py` and `src/agent.py` → `src/generation.py`, updating all imports.
-- **Feature 18 Sub-task E**: Remove `sys.path.insert(0, ...)` hacks from tests; ensure all tests import from canonical domain paths; run full test suite and verify CLI still works.
+## Pipeline Variants
+| Variant | Features | Notes |
+| --- | --- | --- |
+| V0 | (none) | pure vector search |
+| V1 | `tag_filtering` | drops candidates with no query-tag overlap |
+| V2 | + `summary_embedding` | reduces distance on summary word matches |
+| V3 | + `query_expansion` | centroid of up to 3 query variants |
+| V4 | + `rerank` | two-stage sim + importance + diversity |
+| V5 | + `importance` | per-chunk importance weight from metadata |
+
+The CLI uses V5. Pass a different variant to `build_pipeline()` in
+Python.
+
+## Pending Tasks
+- **Feature 18 Sub-task D**: Rename `src/preprocessor.py` → `src/query.py`
+  and `src/agent.py` → `src/generation.py`, updating all imports.
+- **Feature 18 Sub-task E**: Remove `sys.path.insert(0, ...)` hacks from
+  tests; ensure all tests import from canonical domain paths; run the
+  full test suite and verify the CLI still works.
 
 ## Notable Constraints
-- Local development tests require the `.venv` at the repo root (Python 3.12) with `pytest`, `numpy`, `faiss-cpu`, `llama-index`, etc. installed
-- OpenRouter endpoint is configurable via `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and `OPENROUTER_API_BASE` env vars (defaults to `openrouter/free` model and `https://openrouter.ai/api/v1/chat/completions`)
-- Required env vars are documented in `.env` at the repo root: `HF_TOKEN`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_API_BASE`
+- Local development uses the `.venv` at the repo root (Python 3.12) with
+  `pytest`, `numpy`, `faiss-cpu`, `llama-index`, `pypdf`,
+  `sentence-transformers`, `python-dotenv` installed
+- OpenRouter endpoint is configurable via `OPENROUTER_API_KEY`,
+  `OPENROUTER_MODEL`, and `OPENROUTER_API_BASE` env vars
+  (defaults: `openrouter/free` model, `https://openrouter.ai/api/v1/chat/completions`)
+- Required env vars are documented in `.env` at the repo root:
+  `HF_TOKEN`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
+  `OPENROUTER_API_BASE`
+- `extract_tags` and `extract_chunk_metadata` are deterministic
+  heuristics (no LLM call). The DESIGN.md flow calls for an LLM-based
+  tagger; a real LLM tagger can be dropped in behind the same function
+  signature without changing callers
+- `rerank` is heuristic (no cross-encoder). A cross-encoder can replace
+  it later behind the same `rerank` signature
