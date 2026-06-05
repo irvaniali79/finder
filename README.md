@@ -57,10 +57,10 @@ or delete the `.cache/` directory.
 | `retrieval.py` | `DocumentRetriever` — orchestrates ingestion, FAISS index management, persistence, search |
 | `ingestion.py` | File loading (`.md`/`.txt`/`.pdf`), chunking with `SentenceSplitter`, per-chunk metadata extraction, content fingerprinting |
 | `storage.py` | `ChunkStore` — SQLite-backed chunk storage (text + tags + summary + importance) |
-| `preprocessor.py` | Query preprocessing — stopword-based `extract_tags`, `expand_query` (≤3 variants), `detect_question_intent`, `combine_query_embeddings` |
+| `query.py` | Query preprocessing — stopword-based `extract_tags`, `expand_query` (≤3 variants), `detect_question_intent`, `combine_query_embeddings` |
 | `reranking.py` | Tag filtering, summary-match distance boost, two-stage re-ranking (similarity + importance + diversity penalty) |
 | `pipeline.py` | `Pipeline` orchestration + `VARIANT_FEATURES` registry + `build_pipeline()` factory |
-| `agent.py` | `QAAgent` — prompt construction and OpenRouter API call with retry |
+| `generation.py` | `QAAgent` — prompt construction and OpenRouter API call with retry |
 
 ### Pipeline Variants (Ablation Harness)
 

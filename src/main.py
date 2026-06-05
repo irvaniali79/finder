@@ -2,7 +2,7 @@ import sys
 from dotenv import load_dotenv
 load_dotenv()
 from src.pipeline import build_pipeline
-from src.agent import QAAgent
+from src.generation import QAAgent
 
 def main():
     print("Company Knowledge Bot - Ask me anything about our policies and products!")
