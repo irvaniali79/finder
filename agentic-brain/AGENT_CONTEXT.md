@@ -55,11 +55,7 @@ The CLI uses V5. Pass a different variant to `build_pipeline()` in
 Python.
 
 ## Pending Tasks
-- **Feature 18 Sub-task D**: Rename `src/preprocessor.py` → `src/query.py`
-  and `src/agent.py` → `src/generation.py`, updating all imports.
-- **Feature 18 Sub-task E**: Remove `sys.path.insert(0, ...)` hacks from
-  tests; ensure all tests import from canonical domain paths; run the
-  full test suite and verify the CLI still works.
+None — all planned features (1–18) are complete.
 
 ## Notable Constraints
 - Local development uses the `.venv` at the repo root (Python 3.12) with

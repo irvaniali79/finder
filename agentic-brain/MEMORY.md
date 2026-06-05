@@ -140,3 +140,12 @@
 - Renamed test method `test_build_query_embedding_uses_preprocessor_when_expansion_enabled` → `test_build_query_embedding_uses_query_module_when_expansion_enabled`
 - Updated `README.md`, `PROJECT_BRIEF.md`, `AGENT_CONTEXT.md` to reference the new module names
 - All 121 tests still pass; no public-API changes; CLI still loads
+
+## Feature 18 — Sub-task E: Finalize imports and remove sys.path hacks
+- Removed every `sys.path.insert(0, ...)` hack from `tests/` (5 files)
+- Replaced bare `from storage/retrieval/ingestion import ...` in `tests/test_retrieval.py` with canonical `from src.X import Y`
+- Added a single `conftest.py` at the repo root that ensures the project root is on `sys.path` — this is the standard pytest pattern and means tests no longer need to know about the `src/` layout
+- All test files now use the same import style: `from src.module import symbol`
+- `python -m pytest` from the repo root works without flags; `python -m src.main` still launches the CLI
+- All 121 tests pass; CLI bootstraps, loads the pipeline, and reaches the LLM call (401 with dummy key is expected, not a regression)
+- Feature 18 (Domain-Driven Codebase Refactoring) is now complete

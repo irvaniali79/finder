@@ -1,17 +1,13 @@
 import unittest
 from unittest.mock import MagicMock, patch
 import numpy as np
-import sys
-import os
 import tempfile
 import shutil
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from storage import ChunkStore
-from retrieval import DocumentRetriever
-from ingestion import extract_chunk_metadata
+from src.storage import ChunkStore
+from src.retrieval import DocumentRetriever
+from src.ingestion import extract_chunk_metadata
 
 
 class TestChunkStore(unittest.TestCase):
