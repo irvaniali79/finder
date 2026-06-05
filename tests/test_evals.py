@@ -8,7 +8,7 @@ import faiss
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.retrieval import DocumentRetriever
-from src.agent import QAAgent
+from src.generation import QAAgent
 
 
 class TestEvalSuite(unittest.TestCase):
@@ -122,7 +122,7 @@ class TestQAAgentEval(TestEvalSuite):
         self.assertIn("We are open Monday through Friday", prompt)
         self.assertIn("What are the business hours", prompt)
 
-    @patch("src.agent.requests.Session.post")
+    @patch("src.generation.requests.Session.post")
     def test_agent_answer_with_expected_responses(self, mock_post):
         expected = self.EXPECTED_ANSWERS[
             "What are the business hours for customer support?"

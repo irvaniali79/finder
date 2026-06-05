@@ -14,10 +14,10 @@ isolation.
   - `retrieval.py` — `DocumentRetriever` orchestration
   - `ingestion.py` — file loading, chunking, metadata extraction, fingerprinting
   - `storage.py` — `ChunkStore` (SQLite)
-  - `preprocessor.py` — query preprocessing
+  - `query.py` — query preprocessing
   - `reranking.py` — tag filtering, summary boost, re-ranking
   - `pipeline.py` — `Pipeline` + `VARIANT_FEATURES` + `build_pipeline()`
-  - `agent.py` — `QAAgent` (OpenRouter)
+  - `generation.py` — `QAAgent` (OpenRouter)
   - `main.py` — CLI entry point
 - `tests/`: unit + integration tests across every module
 - `agentic-brain/`: project documentation and evaluation

@@ -6,7 +6,7 @@ from llama_index.core import Document
 from llama_index.core.text_splitter import SentenceSplitter
 from llama_index.readers.file import PDFReader
 
-from src.preprocessor import extract_tags
+from src.query import extract_tags
 
 
 SUPPORTED_SUFFIXES = {".md", ".txt", ".pdf"}

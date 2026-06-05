@@ -131,3 +131,12 @@
 - `Pipeline.rerank` and `Pipeline.retrieve_top_k` now delegate to the standalone `rerank` function. `Pipeline.retrieve` delegates `tag_filtering` and `summary_embedding` to `filter_by_tags`/`boost_by_summary`
 - New test file `tests/test_reranking.py` (18 tests) directly exercises the standalone functions. Existing `tests/test_pipeline.py` continues to pass unchanged
 - All 121 tests pass; CLI still loads
+
+## Feature 18 — Sub-task D: Rename preprocessor.py → query.py and agent.py → generation.py
+- Renamed `src/preprocessor.py` → `src/query.py` and `src/agent.py` → `src/generation.py` using `git mv` (history preserved)
+- New names better describe the domain: "query" is what the module operates on (not "preprocessing", which describes a phase), "generation" is the LLM step (not "agent", which was vague)
+- Updated all imports across `src/`: `src/main.py`, `src/pipeline.py`, `src/ingestion.py`
+- Updated all test imports: `tests/test_agent.py`, `tests/test_pipeline.py`, `tests/test_evals.py`; `@patch` targets updated to `src.generation.requests.Session.post`
+- Renamed test method `test_build_query_embedding_uses_preprocessor_when_expansion_enabled` → `test_build_query_embedding_uses_query_module_when_expansion_enabled`
+- Updated `README.md`, `PROJECT_BRIEF.md`, `AGENT_CONTEXT.md` to reference the new module names
+- All 121 tests still pass; no public-API changes; CLI still loads

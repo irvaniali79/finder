@@ -164,7 +164,7 @@
   - Update `src/main.py`, `src/pipeline.py` imports
   - Update all test files to import from new names
   - Tests: test_agent.py, test_pipeline.py, test_main.py, test_evals.py
-  - [ ] Task complete
+  - [x] Task complete
 - **Sub-task E: Update imports across all tests and finalize**
   - Remove `sys.path.insert(0, ...)` hacks from tests — project should be runnable with `python -m pytest` from root or `python -m src.main`
   - Ensure all tests import from canonical domain paths (e.g. `from src.storage import ChunkStore`)

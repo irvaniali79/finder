@@ -1,5 +1,5 @@
 import numpy as np
-from src.preprocessor import combine_query_embeddings, expand_query
+from src.query import combine_query_embeddings, expand_query
 from src.reranking import boost_by_summary, filter_by_tags, rerank
 from src.retrieval import DocumentRetriever
 
@@ -21,7 +21,7 @@ VARIANT_FEATURES = {
 
 
 def _extract_tags(query):
-    from src.preprocessor import extract_tags
+    from src.query import extract_tags
 
     return extract_tags(query)
 

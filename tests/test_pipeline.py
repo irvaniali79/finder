@@ -4,16 +4,16 @@ import sys
 import os
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from preprocessor import (
+from src.query import (
     extract_tags,
     expand_query,
     detect_question_intent,
     combine_query_embeddings,
     STOPWORDS,
 )
-from pipeline import Pipeline
+from src.pipeline import Pipeline
 
 
 class TestExtractTags(unittest.TestCase):
@@ -125,7 +125,7 @@ class TestPipelineQueryExpansion(unittest.TestCase):
         p.retrieve("What is the leave policy?")
         self.assertEqual(retriever.embed_model.get_text_embedding.call_count, 1)
 
-    def test_build_query_embedding_uses_preprocessor_when_expansion_enabled(self):
+    def test_build_query_embedding_uses_query_module_when_expansion_enabled(self):
         retriever = self._make_retriever()
         p = Pipeline.__new__(Pipeline)
         p.retriever = retriever

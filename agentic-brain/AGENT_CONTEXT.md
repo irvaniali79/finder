@@ -18,7 +18,7 @@ the contribution of each retrieval feature in isolation.
   incremental — it fingerprints each file under `docs/`, restores the
   index from cache, and only re-processes files that are new or
   changed
-- **Query Preprocessing** (`src/preprocessor.py`): `extract_tags`,
+- **Query Preprocessing** (`src/query.py`): `extract_tags`,
   `expand_query` (≤ 3 variants), `detect_question_intent`,
   `combine_query_embeddings`
 - **Re-ranking & Filtering** (`src/reranking.py`): `query_word_set`,
@@ -30,7 +30,7 @@ the contribution of each retrieval feature in isolation.
   3-tuples `(text, distance, metadata)`. `Pipeline.retrieve_top_n`,
   `rerank`, and `retrieve_top_k` provide the two-stage retrieval
   path
-- **Generation** (`src/agent.py`): `QAAgent` builds the prompt (with
+- **Generation** (`src/generation.py`): `QAAgent` builds the prompt (with
   source + summary headers) and calls the OpenRouter API with
   exponential-backoff retry
 - **CLI** (`src/main.py`): interactive loop using `build_pipeline("V5")`

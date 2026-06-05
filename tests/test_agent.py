@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from agent import QAAgent
+from src.generation import QAAgent
 
 
 class TestQAAgent(unittest.TestCase):
@@ -24,7 +24,7 @@ class TestQAAgent(unittest.TestCase):
         self.assertIn("full-time employees receive 20 days.", prompt)
         self.assertIn("What are your business hours?", prompt)
 
-    @patch("agent.requests.Session.post")
+    @patch("src.generation.requests.Session.post")
     def test_answer_returns_llm_text(self, mock_post):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -41,7 +41,7 @@ class TestQAAgent(unittest.TestCase):
         prompt = self.agent.generate_prompt("q", chunks)
         self.assertIn("answer text", prompt)
 
-    @patch("agent.requests.Session.post")
+    @patch("src.generation.requests.Session.post")
     def test_answer_raises_on_parse_error(self, mock_post):
         mock_response = MagicMock()
         mock_response.text = "Bad Gateway"
