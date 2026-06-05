@@ -123,3 +123,11 @@
 - `tests/test_retrieval.py` imports `extract_chunk_metadata` from `src.ingestion` and now patches `src.ingestion.SentenceSplitter` and `src.ingestion.PDFReader` (not `retrieval.*`) because `retrieval.py` resolves the symbols through `src.ingestion`; patching the wrong module is silently a no-op since the test bootstrap (`sys.path.insert(0, 'src')`) creates a separate top-level `ingestion` module
 - All 103 tests still pass; CLI (`python -m src.main`) still loads and reads from `.cache/`
 - No functional change to the public API; this is purely a domain split
+
+## Feature 18 — Sub-task C: Extract Reranking + Filtering into src/reranking.py
+- New module `src/reranking.py` owns all scoring and filtering helpers: `query_word_set`, `summary_match_count`, `filter_by_tags`, `boost_by_summary`, `rerank` (all standalone functions, no `self`)
+- All rerank/filter weights (`_RERANK_SIM_WEIGHT`, `_RERANK_IMPORTANCE_WEIGHT`, `_RERANK_DIVERSITY_PENALTY`, `_SUMMARY_BOOST*`) live in `src.reranking` and remain private
+- `filter_by_tags` now takes an `extract_tags_fn` parameter (dependency injection) instead of importing `src.preprocessor` directly. `src/pipeline.py` provides a thin local wrapper that resolves `extract_tags` at call time so the import doesn't create a circular dependency
+- `Pipeline.rerank` and `Pipeline.retrieve_top_k` now delegate to the standalone `rerank` function. `Pipeline.retrieve` delegates `tag_filtering` and `summary_embedding` to `filter_by_tags`/`boost_by_summary`
+- New test file `tests/test_reranking.py` (18 tests) directly exercises the standalone functions. Existing `tests/test_pipeline.py` continues to pass unchanged
+- All 121 tests pass; CLI still loads

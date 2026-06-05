@@ -157,7 +157,7 @@
   - Move `_query_word_set()`, `_summary_match_count()`, `_filter_by_tags()` (as standalone function), `_boost_by_summary()` (as standalone function), `Pipeline.rerank()` (as standalone `rerank()` function) from `pipeline.py` into new `src/reranking.py`
   - `Pipeline.retrieve()` and `Pipeline.retrieve_top_k()` stay in `pipeline.py` but delegate to `src.reranking`
   - Tests: test_pipeline.py (TestRerank, parts of TestRetrieveTopK, TestMetadataVariants)
-  - [ ] Task complete
+  - [x] Task complete
 - **Sub-task D: Rename preprocessor.py → query.py and agent.py → generation.py**
   - Rename `src/preprocessor.py` to `src/query.py` (update all internal references in `src/`)
   - Rename `src/agent.py` to `src/generation.py` (update all internal references in `src/`)

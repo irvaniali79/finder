@@ -1,8 +1,7 @@
-import re
-
 import numpy as np
+from src.preprocessor import combine_query_embeddings, expand_query
+from src.reranking import boost_by_summary, filter_by_tags, rerank
 from src.retrieval import DocumentRetriever
-from src.preprocessor import expand_query, combine_query_embeddings, extract_tags
 
 
 VARIANT_FEATURES = {
@@ -21,28 +20,10 @@ VARIANT_FEATURES = {
 }
 
 
-_RERANK_SIM_WEIGHT = 0.7
-_RERANK_IMPORTANCE_WEIGHT = 0.3
-_RERANK_DIVERSITY_PENALTY = 0.1
-_SUMMARY_BOOST = 0.05
-_SUMMARY_BOOST_PER_HIT = 0.05
-_SUMMARY_BOOST_MAX = 0.2
+def _extract_tags(query):
+    from src.preprocessor import extract_tags
 
-
-def _query_word_set(query):
-    return {w for w in re.findall(r"\b[a-zA-Z][a-zA-Z0-9_-]*\b", query.lower())
-            if len(w) > 1}
-
-
-def _summary_match_count(query, summary):
-    if not summary:
-        return 0
-    qwords = _query_word_set(query)
-    if not qwords:
-        return 0
-    s_tokens = {w for w in re.findall(r"\b[a-zA-Z][a-zA-Z0-9_-]*\b", summary.lower())
-                if len(w) > 1}
-    return len(qwords & s_tokens)
+    return extract_tags(query)
 
 
 class Pipeline:
@@ -95,21 +76,6 @@ class Pipeline:
                 candidates.append(self._normalize_candidate(chunk, dist))
         return candidates
 
-    def _filter_by_tags(self, query, candidates):
-        qtags = set(extract_tags(query))
-        if not qtags:
-            return candidates
-        return [c for c in candidates if set(c.get("tags", [])) & qtags]
-
-    def _boost_by_summary(self, query, candidates):
-        if not candidates:
-            return candidates
-        for c in candidates:
-            hits = _summary_match_count(query, c.get("summary", ""))
-            boost = min(_SUMMARY_BOOST_MAX, _SUMMARY_BOOST + hits * _SUMMARY_BOOST_PER_HIT)
-            c["distance"] = max(0.0, c["distance"] - boost)
-        return candidates
-
     def retrieve_top_n(self, query, n=None):
         if n is None:
             n = self.top_n
@@ -132,33 +98,13 @@ class Pipeline:
 
     @staticmethod
     def rerank(candidates, query, importance_fn=None):
-        if not candidates:
-            return []
-        distances = [c["distance"] for c in candidates]
-        max_dist = max(distances)
-        min_dist = min(distances)
-        spread = max(max_dist - min_dist, 1e-9)
-        norm_sim = [(max_dist - d) / spread for d in distances]
-        scored = []
-        file_seen_count = {}
-        for i, c in enumerate(candidates):
-            importance = importance_fn(c) if importance_fn is not None else 0.0
-            file_seen_count[c["file_name"]] = file_seen_count.get(c["file_name"], 0) + 1
-            penalty = _RERANK_DIVERSITY_PENALTY * (file_seen_count[c["file_name"]] - 1)
-            score = (
-                _RERANK_SIM_WEIGHT * norm_sim[i]
-                + _RERANK_IMPORTANCE_WEIGHT * importance
-                - penalty
-            )
-            scored.append((score, i, c))
-        scored.sort(key=lambda x: -x[0])
-        return [item[2] for item in scored]
+        return rerank(candidates, query, importance_fn=importance_fn)
 
     def retrieve_top_k(self, query, k=None, importance_fn=None):
         if k is None:
             k = self.top_k
         candidates = self.retrieve_top_n(query, n=self.top_n)
-        reranked = self.rerank(candidates, query, importance_fn=importance_fn)
+        reranked = rerank(candidates, query, importance_fn=importance_fn)
         trimmed = reranked[:k]
         return [(c["text"], c["distance"], self._candidate_metadata(c)) for c in trimmed]
 
@@ -186,9 +132,9 @@ class Pipeline:
         query_emb = self._build_query_embedding(query)
         candidates = self._search_candidates(query_emb)
         if "tag_filtering" in self.features:
-            candidates = self._filter_by_tags(query, candidates)
+            candidates = filter_by_tags(query, candidates, _extract_tags)
         if "summary_embedding" in self.features:
-            candidates = self._boost_by_summary(query, candidates)
+            candidates = boost_by_summary(query, candidates)
         return [(c["text"], c["distance"], self._candidate_metadata(c)) for c in candidates]
 
 
